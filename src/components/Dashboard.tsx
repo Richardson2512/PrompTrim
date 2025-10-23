@@ -27,9 +27,11 @@ export const Dashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="bg-blue-600 rounded-lg p-2">
-                <Zap className="w-6 h-6 text-white" />
-              </div>
+              <img 
+                src="/Logo.png" 
+                alt="PromptTrim Logo" 
+                className="h-10 w-10 object-contain"
+              />
               <div>
                 <h1 className="text-xl font-bold text-white">PromptTrim</h1>
                 <p className="text-xs text-slate-400">AI Prompt Optimizer</p>
