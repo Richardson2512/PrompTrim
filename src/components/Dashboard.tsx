@@ -30,7 +30,7 @@ export const Dashboard: React.FC = () => {
               <img 
                 src="/Logo.png" 
                 alt="PromptTrim Logo" 
-                className="h-10 w-10 object-contain"
+                className="h-12 w-12 object-contain"
               />
               <div>
                 <h1 className="text-xl font-bold text-white">PromptTrim</h1>

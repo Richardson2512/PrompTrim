@@ -50,25 +50,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id).then(setProfile);
+    // Handle email confirmation from URL
+    const handleEmailConfirmation = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (data.session) {
+        setUser(data.session.user);
+        const profileData = await fetchProfile(data.session.user.id);
+        setProfile(profileData);
       }
       setLoading(false);
-    });
+    };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          const profileData = await fetchProfile(session.user.id);
-          setProfile(profileData);
-        } else {
-          setProfile(null);
+    handleEmailConfirmation();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        let profileData = await fetchProfile(session.user.id);
+        
+        // If profile doesn't exist (e.g., after email confirmation), create it
+        if (!profileData && event === 'SIGNED_IN') {
+          const fullName = session.user.user_metadata?.full_name || 'User';
+          const email = session.user.email || '';
+          
+          const { error: profileError } = await supabase.from('profiles').insert({
+            id: session.user.id,
+            email,
+            full_name: fullName,
+            subscription_tier: 'free',
+            monthly_token_limit: 10000,
+            tokens_used_this_month: 0,
+          });
+
+          if (!profileError) {
+            profileData = await fetchProfile(session.user.id);
+          }
         }
-        setLoading(false);
-      })();
+        
+        setProfile(profileData);
+      } else {
+        setProfile(null);
+      }
+      
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -78,22 +103,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          full_name: fullName,
+        }
+      }
     });
 
     if (error) throw error;
 
-    if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        email,
-        full_name: fullName,
-        subscription_tier: 'free',
-        monthly_token_limit: 10000,
-        tokens_used_this_month: 0,
-      });
-
-      if (profileError) throw profileError;
-    }
+    // Note: Profile will be created after email confirmation
+    // The profile creation is handled in the auth state change listener
   };
 
   const signIn = async (email: string, password: string) => {
