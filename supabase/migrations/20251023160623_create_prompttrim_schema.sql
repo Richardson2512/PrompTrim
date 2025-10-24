@@ -1,72 +1,32 @@
 /*
-  # PromptTrim Database Schema
-
+  # PromptTrim Complete Database Schema with First Name & Last Name Support
+  
   ## Overview
   This migration creates the complete database schema for PromptTrim - an AI-powered prompt optimization platform.
-
-  ## 1. New Tables
+  Includes all tables, security policies, indexes, and first name/last name functionality.
   
-  ### `profiles`
-  - `id` (uuid, primary key) - Links to auth.users
-  - `email` (text) - User email
-  - `full_name` (text) - User's full name
-  - `subscription_tier` (text) - free, pro, enterprise
-  - `monthly_token_limit` (integer) - Token optimization limit per month
-  - `tokens_used_this_month` (integer) - Current month usage
-  - `created_at` (timestamptz) - Account creation timestamp
-  - `updated_at` (timestamptz) - Last update timestamp
-
-  ### `prompts`
-  - `id` (uuid, primary key)
-  - `user_id` (uuid, foreign key to profiles)
-  - `original_text` (text) - The original prompt submitted
-  - `original_token_count` (integer) - Token count of original
-  - `optimized_text` (text) - The optimized version
-  - `optimized_token_count` (integer) - Token count after optimization
-  - `tokens_saved` (integer) - Difference between original and optimized
-  - `optimization_level` (text) - aggressive, moderate, minimal
-  - `language` (text) - Detected or specified language
-  - `status` (text) - pending, completed, failed
-  - `cost_saved_usd` (numeric) - Estimated cost savings
-  - `created_at` (timestamptz)
-
-  ### `analytics_daily`
-  - `id` (uuid, primary key)
-  - `user_id` (uuid, foreign key to profiles)
-  - `date` (date) - The specific date
-  - `total_prompts` (integer) - Number of prompts optimized
-  - `total_tokens_saved` (integer) - Total tokens saved that day
-  - `total_cost_saved_usd` (numeric) - Total cost saved
-  - `avg_compression_rate` (numeric) - Average percentage of tokens saved
-  - `created_at` (timestamptz)
-
-  ### `api_keys`
-  - `id` (uuid, primary key)
-  - `user_id` (uuid, foreign key to profiles)
-  - `key_hash` (text) - Hashed API key for security
-  - `key_prefix` (text) - First 8 chars for identification
-  - `name` (text) - User-defined name for the key
-  - `is_active` (boolean) - Whether key is active
-  - `last_used_at` (timestamptz) - Last usage timestamp
-  - `created_at` (timestamptz)
-
-  ## 2. Security
-  - Enable RLS on all tables
-  - Add policies for authenticated users to manage their own data
-  - Restrict access based on user_id ownership
-
-  ## 3. Important Notes
-  - All tables use gen_random_uuid() for primary keys
-  - Timestamps default to now()
-  - Token limits are enforced at application level
-  - Analytics are aggregated daily for performance
+  ## Tables Created:
+  - `profiles` - User profiles with first_name and last_name support
+  - `prompts` - Prompt optimization records
+  - `analytics_daily` - Daily analytics aggregation
+  - `api_keys` - API key management
+  
+  ## Features:
+  - Row Level Security (RLS) enabled on all tables
+  - Separate first_name and last_name fields for better data management
+  - Performance indexes
+  - Audit timestamps
 */
 
--- Create profiles table
+-- =============================================
+-- 1. CREATE PROFILES TABLE WITH FIRST NAME & LAST NAME
+-- =============================================
+
 CREATE TABLE IF NOT EXISTS profiles (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email text NOT NULL,
-  full_name text,
+  first_name text,
+  last_name text,
   subscription_tier text DEFAULT 'free' CHECK (subscription_tier IN ('free', 'pro', 'enterprise')),
   monthly_token_limit integer DEFAULT 10000,
   tokens_used_this_month integer DEFAULT 0,
@@ -75,6 +35,11 @@ CREATE TABLE IF NOT EXISTS profiles (
 );
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist, then recreate them
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
 
 CREATE POLICY "Users can view own profile"
   ON profiles FOR SELECT
@@ -109,6 +74,12 @@ CREATE TABLE IF NOT EXISTS prompts (
 );
 
 ALTER TABLE prompts ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist, then recreate them
+DROP POLICY IF EXISTS "Users can view own prompts" ON prompts;
+DROP POLICY IF EXISTS "Users can insert own prompts" ON prompts;
+DROP POLICY IF EXISTS "Users can update own prompts" ON prompts;
+DROP POLICY IF EXISTS "Users can delete own prompts" ON prompts;
 
 CREATE POLICY "Users can view own prompts"
   ON prompts FOR SELECT
@@ -146,6 +117,11 @@ CREATE TABLE IF NOT EXISTS analytics_daily (
 
 ALTER TABLE analytics_daily ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist, then recreate them
+DROP POLICY IF EXISTS "Users can view own analytics" ON analytics_daily;
+DROP POLICY IF EXISTS "Users can insert own analytics" ON analytics_daily;
+DROP POLICY IF EXISTS "Users can update own analytics" ON analytics_daily;
+
 CREATE POLICY "Users can view own analytics"
   ON analytics_daily FOR SELECT
   TO authenticated
@@ -176,6 +152,12 @@ CREATE TABLE IF NOT EXISTS api_keys (
 
 ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist, then recreate them
+DROP POLICY IF EXISTS "Users can view own API keys" ON api_keys;
+DROP POLICY IF EXISTS "Users can insert own API keys" ON api_keys;
+DROP POLICY IF EXISTS "Users can update own API keys" ON api_keys;
+DROP POLICY IF EXISTS "Users can delete own API keys" ON api_keys;
+
 CREATE POLICY "Users can view own API keys"
   ON api_keys FOR SELECT
   TO authenticated
@@ -204,7 +186,11 @@ CREATE INDEX IF NOT EXISTS idx_analytics_user_date ON analytics_daily(user_id, d
 CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
 
--- Create function to update updated_at timestamp
+-- =============================================
+-- 6. CREATE UTILITY FUNCTIONS
+-- =============================================
+
+-- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -213,8 +199,53 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create trigger for profiles updated_at
+-- Function to create full name from first_name and last_name
+CREATE OR REPLACE FUNCTION create_full_name(first_name text, last_name text)
+RETURNS text AS $$
+BEGIN
+  IF first_name IS NULL AND last_name IS NULL THEN
+    RETURN NULL;
+  END IF;
+  
+  IF first_name IS NULL THEN
+    RETURN last_name;
+  END IF;
+  
+  IF last_name IS NULL THEN
+    RETURN first_name;
+  END IF;
+  
+  RETURN trim(first_name) || ' ' || trim(last_name);
+END;
+$$ LANGUAGE plpgsql;
+
+-- =============================================
+-- 7. CREATE TRIGGERS
+-- =============================================
+
+-- Drop existing trigger if it exists, then recreate it
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
+
+-- Trigger for profiles updated_at
 CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON profiles
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================
+-- MIGRATION COMPLETE
+-- =============================================
+
+-- Success message
+DO $$
+BEGIN
+  RAISE NOTICE 'PromptTrim database schema created successfully!';
+  RAISE NOTICE 'Features enabled:';
+  RAISE NOTICE '- User profiles with separate first name and last name fields';
+  RAISE NOTICE '- Prompt optimization tracking';
+  RAISE NOTICE '- Daily analytics aggregation';
+  RAISE NOTICE '- API key management';
+  RAISE NOTICE '- Row Level Security (RLS)';
+  RAISE NOTICE '- Performance indexes';
+  RAISE NOTICE '- Audit timestamps';
+END $$;

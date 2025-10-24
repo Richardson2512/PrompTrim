@@ -3,16 +3,24 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
+// Check if Supabase is properly configured
+export const isSupabaseConfigured = () => {
+  return supabaseUrl && supabaseAnonKey && 
+         supabaseUrl !== 'your_supabase_url_here' && 
+         supabaseAnonKey !== 'your_supabase_anon_key_here';
+};
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create Supabase client - no mock client
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder-key'
+);
 
 export interface Profile {
   id: string;
   email: string;
-  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   subscription_tier: 'free' | 'pro' | 'enterprise';
   monthly_token_limit: number;
   tokens_used_this_month: number;

@@ -1,17 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useRouter } from '../contexts/RouterContext';
 import { LogIn, UserPlus, Loader2 } from 'lucide-react';
 
 export const AuthForm: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [signupSuccess, setSignupSuccess] = useState(false);
 
   const { signIn, signUp } = useAuth();
+  const { currentRoute, navigateTo } = useRouter();
+
+  // Set login/signup mode based on route
+  useEffect(() => {
+    setIsLogin(currentRoute === 'login');
+  }, [currentRoute]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,14 +30,15 @@ export const AuthForm: React.FC = () => {
     try {
       if (isLogin) {
         await signIn(email, password);
-      } else {
-        await signUp(email, password, fullName);
-        setSignupSuccess(true);
-        // Clear form after successful signup
-        setEmail('');
-        setPassword('');
-        setFullName('');
-      }
+            } else {
+              await signUp(email, password, firstName, lastName);
+              setSignupSuccess(true);
+              // Clear form after successful signup
+              setEmail('');
+              setPassword('');
+              setFirstName('');
+              setLastName('');
+            }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
@@ -40,78 +49,40 @@ export const AuthForm: React.FC = () => {
 
   return (
     <div className="h-screen w-screen flex overflow-hidden">
-      {/* Left side - PromptTrim branding with features */}
-      <div 
-        className="flex-1 relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(189.4deg, #72CAFD 15.16%, rgba(161, 209, 255, 0.93) 52.67%, #65C0F3 96.46%)',
-          boxShadow: '0px 0px 13.7px 11px rgba(255, 255, 255, 0.25) inset'
-        }}
-      >
-        {/* Background bubbles */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-32 h-32 bg-blue-200/30 rounded-full blur-xl"></div>
-          <div className="absolute top-40 right-32 w-24 h-24 bg-blue-300/40 rounded-full blur-lg"></div>
-          <div className="absolute bottom-32 left-40 w-40 h-40 bg-blue-200/20 rounded-full blur-2xl"></div>
-          <div className="absolute bottom-20 right-20 w-28 h-28 bg-blue-300/30 rounded-full blur-xl"></div>
-          <div className="absolute top-60 left-60 w-20 h-20 bg-blue-400/30 rounded-full blur-lg"></div>
-          <div className="absolute bottom-60 right-60 w-36 h-36 bg-blue-200/25 rounded-full blur-2xl"></div>
-        </div>
-
-        {/* Abstract lines pattern */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative w-96 h-96">
-            {/* Central swirling pattern */}
-            <div className="absolute inset-0 border-2 border-white/20 rounded-full"></div>
-            <div className="absolute inset-8 border border-white/15 rounded-full"></div>
-            <div className="absolute inset-16 border border-white/10 rounded-full"></div>
-            
-            {/* Connecting lines to features */}
-            <div className="absolute top-0 left-1/2 w-px h-32 bg-white/20 transform -translate-x-1/2"></div>
-            <div className="absolute bottom-0 left-1/2 w-px h-32 bg-white/20 transform -translate-x-1/2"></div>
-            <div className="absolute left-0 top-1/2 w-32 h-px bg-white/20 transform -translate-y-1/2"></div>
-            <div className="absolute right-0 top-1/2 w-32 h-px bg-white/20 transform -translate-y-1/2"></div>
-          </div>
-        </div>
-
-        {/* Feature labels */}
-        <div className="absolute top-32 left-16">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-white/60 rounded-full"></div>
-            <span className="text-blue-800/80 font-medium">Performance tracking</span>
-          </div>
-        </div>
-        <div className="absolute top-32 right-16">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-white/60 rounded-full"></div>
-            <span className="text-blue-800/80 font-medium">AI insights</span>
-          </div>
-        </div>
-        <div className="absolute bottom-32 left-16">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-white/60 rounded-full"></div>
-            <span className="text-blue-800/80 font-medium">Team management</span>
-          </div>
-        </div>
-        <div className="absolute bottom-32 right-16">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-white/60 rounded-full"></div>
-            <span className="text-blue-800/80 font-medium">Growth analytics</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Right side - Login/Signup form */}
-      <div className="w-full max-w-lg bg-white flex items-center justify-center p-8 h-full overflow-y-auto">
+      {/* Left side - Login/Signup form */}
+      <div className="w-1/2 bg-white flex items-center justify-center p-8 h-full" style={{ marginTop: '-50px' }}>
         <div className="w-full max-w-md">
-          {/* Welcome text */}
-          <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h1>
-            <p className="text-gray-600">AI-powered prompt optimization for teams and business.</p>
+          {/* Logo - Visible and bigger */}
+          <div className="text-center mb-4">
+            <button
+              onClick={() => navigateTo('landing')}
+              className="flex items-center justify-center bg-transparent hover:opacity-80 transition-opacity cursor-pointer"
+              style={{ width: '273px', height: '273px', margin: '0 auto' }}
+            >
+              <img 
+                src="/logo.png" 
+                alt="Logo" 
+                className="w-full h-full object-contain bg-transparent" 
+                style={{
+                  imageRendering: '-webkit-optimize-contrast',
+                  filter: 'none',
+                  transform: 'translateZ(0)'
+                }}
+              />
+            </button>
           </div>
 
-          <div className="bg-white shadow-sm border border-gray-200 p-6 relative z-5 rounded-md">
-            <div className="flex gap-2 mb-6">
+          {/* Welcome text */}
+          <div className="text-center mb-4" style={{ marginTop: '-80px' }}>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">
+              {isLogin ? 'Welcome back' : 'Create account'}
+            </h1>
+            <p className="text-gray-600 text-sm">AI-powered prompt optimization for teams and business.</p>
+          </div>
+
+          {/* Form container - extends bottom for signup */}
+          <div className="bg-white shadow-sm border border-gray-200 p-4 relative z-5 rounded-md">
+            <div className="flex gap-2 mb-4">
               <button
                 type="button"
                 onClick={() => setIsLogin(true)}
@@ -136,43 +107,59 @@ export const AuthForm: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3">
               {!isLogin && (
-                <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    id="fullName"
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required={!isLogin}
-                    className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent rounded-md"
-                    placeholder="John Doe"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                      First Name
+                    </label>
+                    <input
+                      id="firstName"
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required={!isLogin}
+                      className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent rounded-md"
+                      placeholder="John"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name
+                    </label>
+                    <input
+                      id="lastName"
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required={!isLogin}
+                      className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent rounded-md"
+                      placeholder="Doe"
+                    />
+                  </div>
                 </div>
               )}
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email address
-                </label>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                      Email address
+                    </label>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-4 py-3 bg-white border border-gray-300  text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent rounded-md"
                   placeholder="you@example.com"
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                      Password
+                    </label>
                 <input
                   id="password"
                   type="password"
@@ -180,7 +167,7 @@ export const AuthForm: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full px-4 py-3 bg-white border border-gray-300  text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent rounded-md"
                   placeholder="••••••••"
                 />
               </div>
@@ -229,7 +216,83 @@ export const AuthForm: React.FC = () => {
                 )}
               </button>
             </form>
+            
+            {/* Terms and Privacy Policy - Only show on signup */}
+            {!isLogin && (
+              <div className="text-center mt-2">
+                <p className="text-xs text-gray-500">
+                  By signing up, you are accepting to our{' '}
+                  <a href="#" className="text-orange-500 hover:text-orange-600 underline">
+                    Terms of Service
+                  </a>{' '}
+                  and{' '}
+                  <a href="#" className="text-orange-500 hover:text-orange-600 underline">
+                    Privacy Policy
+                  </a>
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
+      {/* Right side - PrompTrim branding with features */}
+      <div 
+        className="w-1/2 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(189.4deg, #72CAFD 15.16%, rgba(161, 209, 255, 0.93) 52.67%, #65C0F3 96.46%)',
+          boxShadow: '0px 0px 13.7px 11px rgba(255, 255, 255, 0.25) inset'
+        }}
+      >
+        {/* Background bubbles */}
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-20 w-32 h-32 bg-blue-200/30 rounded-full blur-xl"></div>
+          <div className="absolute top-40 right-32 w-24 h-24 bg-blue-300/40 rounded-full blur-lg"></div>
+          <div className="absolute bottom-32 left-40 w-40 h-40 bg-blue-200/20 rounded-full blur-2xl"></div>
+          <div className="absolute bottom-20 right-20 w-28 h-28 bg-blue-300/30 rounded-full blur-xl"></div>
+          <div className="absolute top-60 left-60 w-20 h-20 bg-blue-400/30 rounded-full blur-lg"></div>
+          <div className="absolute bottom-60 right-60 w-36 h-36 bg-blue-200/25 rounded-full blur-2xl"></div>
+        </div>
+
+        {/* Abstract lines pattern */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="relative w-96 h-96">
+            {/* Central swirling pattern */}
+            <div className="absolute inset-0 border-2 border-white/20 rounded-full"></div>
+            <div className="absolute inset-8 border border-white/15 rounded-full"></div>
+            <div className="absolute inset-16 border border-white/10 rounded-full"></div>
+
+            {/* Connecting lines to features */}
+            <div className="absolute top-0 left-1/2 w-px h-32 bg-white/20 transform -translate-x-1/2"></div>
+            <div className="absolute bottom-0 left-1/2 w-px h-32 bg-white/20 transform -translate-x-1/2"></div>
+            <div className="absolute left-0 top-1/2 w-32 h-px bg-white/20 transform -translate-y-1/2"></div>
+            <div className="absolute right-0 top-1/2 w-32 h-px bg-white/20 transform -translate-y-1/2"></div>
+          </div>
+        </div>
+
+        {/* Feature labels */}
+        <div className="absolute top-32 left-16">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-white/60 rounded-full"></div>
+            <span className="text-blue-800/80 font-medium">Performance tracking</span>
+          </div>
+        </div>
+        <div className="absolute top-32 right-16">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-white/60 rounded-full"></div>
+            <span className="text-blue-800/80 font-medium">AI insights</span>
+          </div>
+        </div>
+        <div className="absolute bottom-32 left-16">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-white/60 rounded-full"></div>
+            <span className="text-blue-800/80 font-medium">Team management</span>
+          </div>
+        </div>
+        <div className="absolute bottom-32 right-16">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-white/60 rounded-full"></div>
+            <span className="text-blue-800/80 font-medium">Growth analytics</span>
           </div>
         </div>
       </div>
