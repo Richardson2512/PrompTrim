@@ -411,22 +411,25 @@ function createSeverityIndicator(input) {
   indicator.dataset.severity = 'neutral';
   
   
-  // Initial positioning - keep it simple, just to the left of input right edge
+  // Initial positioning - position like Grammarly/Quillbot
   const positionIndicator = () => {
     const rect = input.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     
-    // Simple positioning: 40px from right edge of input
-    let leftPosition = rect.right - 40;
+    // Position at right edge with 8px gap (like Grammarly)
+    let leftPosition = rect.right - 40; // 32px icon + 8px margin
     
     // Keep within viewport
     if (leftPosition + 40 > viewportWidth - 10) {
       leftPosition = viewportWidth - 45;
     }
     
-    indicator.style.top = `${rect.top + 4}px`;
+    // Center vertically in input
+    const topPosition = rect.top + (rect.height / 2) - 16; // Center the 32px icon
+    
+    indicator.style.top = `${topPosition}px`;
     indicator.style.left = `${leftPosition}px`;
-    indicator.style.zIndex = '9999999';
+    indicator.style.zIndex = '2147483647';
   };
   
   // Position immediately
@@ -468,17 +471,20 @@ function createSeverityIndicator(input) {
     const rect = input.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     
-    // Simple positioning: 40px from right edge of input
-    let leftPosition = rect.right - 40;
+    // Position at right edge with 8px gap (like Grammarly)
+    let leftPosition = rect.right - 40; // 32px icon + 8px margin
     
     // Keep within viewport
     if (leftPosition + 40 > viewportWidth - 10) {
       leftPosition = viewportWidth - 45;
     }
     
-    indicator.style.top = `${rect.top + 4}px`;
+    // Center vertically in input
+    const topPosition = rect.top + (rect.height / 2) - 16; // Center the 32px icon
+    
+    indicator.style.top = `${topPosition}px`;
     indicator.style.left = `${leftPosition}px`;
-    indicator.style.zIndex = '9999999';
+    indicator.style.zIndex = '2147483647';
   };
   
   // Debounce update function to avoid excessive calls
