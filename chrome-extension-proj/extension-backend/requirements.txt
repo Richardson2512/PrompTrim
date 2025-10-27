@@ -1,0 +1,22 @@
+# PrompTrim Backend Requirements
+
+# Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Data Validation
+pydantic==2.5.0
+
+# Optional: TinyLlama Integration
+# torch==2.1.0
+# transformers==4.35.0
+
+# Optional: Rate Limiting
+# slowapi==0.1.9
+
+# Optional: Logging
+# structlog==23.2.0
+
+# Optional: Production Server
+# gunicorn==21.2.0
+

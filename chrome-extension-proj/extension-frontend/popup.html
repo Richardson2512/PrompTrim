@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrompTrim Settings</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <div class="logo">
+        <h1>🎯 PrompTrim</h1>
+      </div>
+      <div class="version">v1.0.0</div>
+    </header>
+
+    <main class="popup-main">
+      <!-- Enable/Disable Toggle -->
+      <section class="setting-section">
+        <div class="setting-header">
+          <h2>Status</h2>
+          <div class="toggle-wrapper">
+            <label class="switch">
+              <input type="checkbox" id="enabledToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        <p class="setting-description">
+          Turn PrompTrim on or off globally
+        </p>
+      </section>
+
+      <!-- Minimum Severity Setting -->
+      <section class="setting-section">
+        <div class="setting-header">
+          <h2>Minimum Severity</h2>
+        </div>
+        <p class="setting-description">
+          Show indicator only for prompts at or above this severity level
+        </p>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="minSeverity" value="green" id="green">
+            <span class="radio-label">
+              <span class="severity-dot severity-green"></span>
+              <span>Green - Show all (default)</span>
+            </span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="minSeverity" value="orange" id="orange">
+            <span class="radio-label">
+              <span class="severity-dot severity-orange"></span>
+              <span>Orange - Show moderate and high</span>
+            </span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="minSeverity" value="red" id="red">
+            <span class="radio-label">
+              <span class="severity-dot severity-red"></span>
+              <span>Red - Show only high verbosity</span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Compression Mode -->
+      <section class="setting-section">
+        <div class="setting-header">
+          <h2>Compression Mode</h2>
+        </div>
+        <p class="setting-description">
+          Choose how prompts are compressed
+        </p>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="compressionMode" value="client" id="client" checked>
+            <span class="radio-label">Client-side (Local)</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="compressionMode" value="api" id="api">
+            <span class="radio-label">API (Remote - TinyLlama)</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- API Endpoint (for future use) -->
+      <section class="setting-section">
+        <div class="setting-header">
+          <h2>API Endpoint</h2>
+        </div>
+        <input 
+          type="text" 
+          id="apiEndpoint" 
+          class="text-input" 
+          placeholder="https://your-api-endpoint.com/compress"
+          disabled
+        >
+        <p class="setting-description">
+          Configure when API mode is selected
+        </p>
+      </section>
+
+      <!-- Stats -->
+      <section class="setting-section">
+        <div class="setting-header">
+          <h2>Statistics</h2>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value" id="promptsOptimized">0</div>
+            <div class="stat-label">Prompts Optimized</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="tokensSaved">0</div>
+            <div class="stat-label">Tokens Saved</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Info -->
+      <section class="setting-section">
+        <div class="setting-header">
+          <h2>About</h2>
+        </div>
+        <p class="setting-description">
+          PrompTrim analyzes your prompts and suggests compressed versions to save tokens and reduce costs. 
+          It works with ChatGPT, Claude, and other LLM chat interfaces.
+        </p>
+        <a href="README.txt" target="_blank" class="link-button">📖 View Documentation</a>
+      </section>
+    </main>
+
+    <footer class="popup-footer">
+      <button id="saveSettings" class="save-button">Save Settings</button>
+      <div class="status-message" id="statusMessage"></div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,289 @@
+/**
+ * PrompTrim Content Styles
+ * Styles for severity indicators and compression modal
+ */
+
+/* Severity Indicator Dot */
+.promptrim-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.promptrim-indicator:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.promptrim-indicator.severity-red {
+  background: linear-gradient(135deg, #ff4444, #cc0000);
+}
+
+.promptrim-indicator.severity-orange {
+  background: linear-gradient(135deg, #ff8844, #cc6600);
+}
+
+.promptrim-indicator.severity-green {
+  background: linear-gradient(135deg, #44ff88, #00cc66);
+}
+
+.promptrim-indicator.severity-red::before {
+  content: '🔴';
+  font-size: 10px;
+}
+
+.promptrim-indicator.severity-orange::before {
+  content: '🟠';
+  font-size: 10px;
+}
+
+.promptrim-indicator.severity-green::before {
+  content: '🟢';
+  font-size: 10px;
+}
+
+/* Modal Overlay */
+.promptrim-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000000;
+  animation: promptrim-fade-in 0.2s ease;
+}
+
+@keyframes promptrim-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal Content */
+.promptrim-modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: promptrim-slide-up 0.3s ease;
+}
+
+@keyframes promptrim-slide-up {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Modal Header */
+.promptrim-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.promptrim-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.promptrim-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.promptrim-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+/* Modal Body */
+.promptrim-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.promptrim-original,
+.promptrim-compressed {
+  margin-bottom: 24px;
+}
+
+.promptrim-original h4,
+.promptrim-compressed h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.promptrim-savings {
+  color: #10b981;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.promptrim-text {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1f2937;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.promptrim-original .promptrim-text {
+  border-left: 4px solid #ef4444;
+}
+
+.promptrim-compressed .promptrim-text {
+  border-left: 4px solid #10b981;
+}
+
+/* Modal Footer */
+.promptrim-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+  justify-content: flex-end;
+}
+
+/* Buttons */
+.promptrim-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.promptrim-accept {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.promptrim-accept:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.promptrim-accept:focus {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}
+
+.promptrim-reject {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.promptrim-reject:hover {
+  background: #e5e7eb;
+  color: #1f2937;
+  transform: translateY(-2px);
+}
+
+.promptrim-reject:focus {
+  outline: 2px solid #6b7280;
+  outline-offset: 2px;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .promptrim-modal-content {
+    width: 95%;
+    max-height: 90vh;
+  }
+  
+  .promptrim-modal-header,
+  .promptrim-modal-body,
+  .promptrim-modal-footer {
+    padding: 16px;
+  }
+  
+  .promptrim-modal-footer {
+    flex-direction: column;
+  }
+  
+  .promptrim-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Accessibility - High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .promptrim-indicator {
+    border-width: 3px;
+  }
+  
+  .promptrim-modal-content {
+    border: 2px solid #000;
+  }
+  
+  .promptrim-btn {
+    border: 2px solid #000;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .promptrim-modal,
+  .promptrim-modal-content,
+  .promptrim-indicator {
+    animation: none;
+    transition: none;
+  }
+}
+
