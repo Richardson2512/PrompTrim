@@ -159,9 +159,19 @@ function scanForInputs() {
 function isLikelyChatInput(element) {
   if (!element || !element.isConnected) return false;
   
+  // Skip hidden elements (display: none)
+  const style = window.getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+    console.log('🎯 PrompTrim: Skipping hidden element');
+    return false;
+  }
+  
   // Must be visible
   const rect = element.getBoundingClientRect();
-  if (rect.width === 0 || rect.height === 0) return false;
+  if (rect.width === 0 || rect.height === 0) {
+    console.log('🎯 PrompTrim: Skipping zero-size element');
+    return false;
+  }
   
   // Check placeholder/text content for chat-like indicators
   const text = (element.textContent || element.placeholder || '').toLowerCase();
@@ -174,6 +184,11 @@ function isLikelyChatInput(element) {
   const isInputOrTextarea = tagName === 'input' || tagName === 'textarea' || tagName === 'div';
   const isContentEditable = element.contentEditable === 'true';
   const hasTextboxRole = element.getAttribute('role') === 'textbox';
+  
+  // For ChatGPT and similar sites, prioritize contentEditable divs
+  if (isContentEditable && tagName === 'div' && rect.width > 100 && rect.height > 20) {
+    return true;
+  }
   
   return (isInputOrTextarea || isContentEditable || hasTextboxRole) && hasChatKeyword;
 }
