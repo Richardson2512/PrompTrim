@@ -204,21 +204,23 @@ function attachToInput(input) {
 function handleInputChange(input, indicator) {
   const text = getInputValue(input);
   
+  // Always show the indicator (like Grammarly/Quillbot)
+  indicator.style.display = 'flex';
+  
   if (!text || text.length < 10) {
-    // Too short to analyze
-    hideSeverityIndicator(indicator);
+    // Too short to analyze - show neutral state
+    indicator.className = 'promptrim-indicator severity-neutral';
+    indicator.setAttribute('title', 'PrompTrim: Start typing to analyze');
+    indicator.setAttribute('aria-label', 'PrompTrim ready');
+    indicator.dataset.analysis = JSON.stringify({ severity: 'neutral', compressed: text || '' });
     return;
   }
   
   // Analyze prompt
   const analysis = analyzePrompt(text);
   
-  // Check if severity meets minimum threshold
-  if (shouldShowIndicator(analysis.severity)) {
-    showSeverityIndicator(indicator, analysis);
-  } else {
-    hideSeverityIndicator(indicator);
-  }
+  // Always show indicator but update severity
+  showSeverityIndicator(indicator, analysis);
   
   // Store analysis for modal
   indicator.dataset.analysis = JSON.stringify(analysis);
@@ -363,25 +365,47 @@ function shouldShowIndicator(severity) {
  */
 function createSeverityIndicator(input) {
   const indicator = document.createElement('div');
-  indicator.className = 'promptrim-indicator';
+  indicator.className = 'promptrim-indicator severity-neutral';
   indicator.setAttribute('role', 'button');
-  indicator.setAttribute('aria-label', 'Prompt severity indicator - click to optimize');
+  indicator.setAttribute('aria-label', 'PrompTrim ready');
   indicator.setAttribute('title', 'PrompTrim: Click to optimize your prompt');
   
-  // Position near input
+  // Position inside the input area (like Grammarly/Quillbot)
   const rect = input.getBoundingClientRect();
   indicator.style.position = 'fixed';
-  indicator.style.top = `${rect.top}px`;
-  indicator.style.left = `${rect.right + 10}px`;
+  indicator.style.top = `${rect.top + 4}px`;
+  indicator.style.left = `${rect.right - 40}px`; // Position from right edge
   indicator.style.zIndex = '999999';
   
   // Add click handler
   indicator.addEventListener('click', () => {
     const analysis = JSON.parse(indicator.dataset.analysis || '{}');
+    
+    // Don't show modal if in neutral state (no text or too short)
+    if (analysis.severity === 'neutral' || !analysis.original || analysis.original.length < 10) {
+      return;
+    }
+    
     showCompressionModal(input, analysis);
   });
   
+  // Show indicator immediately
+  indicator.style.display = 'flex';
+  
   document.body.appendChild(indicator);
+  
+  // Update position on scroll/resize to stay with input
+  const updatePosition = () => {
+    const rect = input.getBoundingClientRect();
+    indicator.style.top = `${rect.top + 4}px`;
+    indicator.style.left = `${rect.right - 40}px`;
+  };
+  
+  const resizeObserver = new ResizeObserver(updatePosition);
+  resizeObserver.observe(input);
+  
+  window.addEventListener('scroll', updatePosition, true);
+  window.addEventListener('resize', updatePosition);
   
   return indicator;
 }

@@ -47,6 +47,10 @@
 }
 
 /* Color the severity dot based on severity */
+.promptrim-indicator.severity-neutral::after {
+  background: linear-gradient(135deg, #9ca3af, #6b7280);
+}
+
 .promptrim-indicator.severity-red::after {
   background: linear-gradient(135deg, #ff4444, #cc0000);
 }
