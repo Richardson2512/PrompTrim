@@ -3,51 +3,60 @@
  * Styles for severity indicators and compression modal
  */
 
-/* Severity Indicator Dot */
+/* Severity Indicator with Logo */
 .promptrim-indicator {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  position: relative;
+  overflow: visible;
 }
 
 .promptrim-indicator:hover {
-  transform: scale(1.2);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-.promptrim-indicator.severity-red {
+/* PrompTrim Logo Text */
+.promptrim-indicator::before {
+  content: 'PT';
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  letter-spacing: 0.5px;
+}
+
+/* Severity Dot Overlay */
+.promptrim-indicator::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Color the severity dot based on severity */
+.promptrim-indicator.severity-red::after {
   background: linear-gradient(135deg, #ff4444, #cc0000);
 }
 
-.promptrim-indicator.severity-orange {
+.promptrim-indicator.severity-orange::after {
   background: linear-gradient(135deg, #ff8844, #cc6600);
 }
 
-.promptrim-indicator.severity-green {
+.promptrim-indicator.severity-green::after {
   background: linear-gradient(135deg, #44ff88, #00cc66);
-}
-
-.promptrim-indicator.severity-red::before {
-  content: '🔴';
-  font-size: 10px;
-}
-
-.promptrim-indicator.severity-orange::before {
-  content: '🟠';
-  font-size: 10px;
-}
-
-.promptrim-indicator.severity-green::before {
-  content: '🟢';
-  font-size: 10px;
 }
 
 /* Modal Overlay */
@@ -265,6 +274,10 @@
 /* Accessibility - High Contrast Mode Support */
 @media (prefers-contrast: high) {
   .promptrim-indicator {
+    border: 2px solid #000;
+  }
+  
+  .promptrim-indicator::after {
     border-width: 3px;
   }
   
