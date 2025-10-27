@@ -18,6 +18,9 @@
   position: fixed !important;
   overflow: visible;
   z-index: 999999 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .promptrim-indicator:hover {

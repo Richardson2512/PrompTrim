@@ -391,11 +391,14 @@ function createSeverityIndicator(input) {
   setTimeout(positionIndicator, 100);
   
   // Add click handler
-  indicator.addEventListener('click', () => {
+  indicator.addEventListener('click', (e) => {
+    e.stopPropagation();
+    console.log('🎯 PrompTrim: Indicator clicked');
     const analysis = JSON.parse(indicator.dataset.analysis || '{}');
     
     // Don't show modal if in neutral state (no text or too short)
     if (analysis.severity === 'neutral' || !analysis.original || analysis.original.length < 10) {
+      console.log('🎯 PrompTrim: Not enough text to show modal');
       return;
     }
     
@@ -404,8 +407,21 @@ function createSeverityIndicator(input) {
   
   // Show indicator immediately
   indicator.style.display = 'flex';
+  indicator.style.visibility = 'visible';
+  indicator.style.opacity = '1';
   
+  console.log('🎯 PrompTrim: Adding indicator to DOM', indicator);
   document.body.appendChild(indicator);
+  
+  // Verify it's in the DOM
+  setTimeout(() => {
+    const stillInDOM = document.body.contains(indicator);
+    console.log('🎯 PrompTrim: Indicator still in DOM after 100ms:', stillInDOM);
+    if (stillInDOM) {
+      const rect = indicator.getBoundingClientRect();
+      console.log('🎯 PrompTrim: Indicator position:', rect.top, rect.left, rect.width, rect.height);
+    }
+  }, 100);
   
   // Update position on scroll/resize to stay with input
   const updatePosition = () => {
