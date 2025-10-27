@@ -391,29 +391,57 @@ function createSeverityIndicator(input) {
   indicator.setAttribute('aria-label', 'PrompTrim ready');
   indicator.setAttribute('title', 'PrompTrim: Click to optimize your prompt');
   
+  // Function to detect existing icons and find best position
+  const findBestPosition = (rect) => {
+    const viewportWidth = window.innerWidth;
+    const indicatorWidth = 40; // 32px icon + 8px margin
+    
+    // Start from right edge of input
+    let leftPosition = rect.right - indicatorWidth;
+    
+    // Check if there are existing icons/extensions to the right of input
+    const rightSideIcons = [];
+    for (let x = leftPosition; x < rect.right + 50; x++) {
+      const element = document.elementFromPoint(x, rect.top + rect.height / 2);
+      if (element && element !== input && element !== indicator) {
+        const elemRect = element.getBoundingClientRect();
+        // Check if it's a small icon (similar size to our indicator)
+        if (elemRect.width > 20 && elemRect.width < 50 && 
+            elemRect.height > 20 && elemRect.height < 50) {
+          rightSideIcons.push(elemRect);
+        }
+      }
+    }
+    
+    // If we found icons, position before them (to the left)
+    if (rightSideIcons.length > 0) {
+      const closestIcon = rightSideIcons.sort((a, b) => a.left - b.left)[0];
+      leftPosition = closestIcon.left - indicatorWidth - 5; // 5px spacing
+      console.log('🎯 PrompTrim: Found existing icons, positioning before them at', leftPosition);
+    }
+    
+    // Keep within viewport bounds
+    if (leftPosition + indicatorWidth > viewportWidth) {
+      leftPosition = viewportWidth - indicatorWidth;
+    }
+    
+    if (leftPosition < 10) {
+      leftPosition = rect.left + 10;
+    }
+    
+    return leftPosition;
+  };
+  
   // Initial positioning
   const positionIndicator = () => {
     const rect = input.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    
-    // Position from right edge, but keep within viewport
-    let leftPosition = rect.right - 40;
-    
-    // If off-screen to the right, adjust to be visible
-    if (leftPosition + 40 > viewportWidth) {
-      leftPosition = viewportWidth - 40;
-    }
-    
-    // If off-screen to the left, position inside input
-    if (leftPosition < rect.left) {
-      leftPosition = rect.left + 10;
-    }
+    const leftPosition = findBestPosition(rect);
     
     indicator.style.top = `${rect.top + 4}px`;
     indicator.style.left = `${leftPosition}px`;
     indicator.style.zIndex = '9999999';
     
-    console.log('🎯 PrompTrim: Positioning indicator at', leftPosition, rect.top + 4, 'viewport width:', viewportWidth);
+    console.log('🎯 PrompTrim: Positioning indicator at', leftPosition, rect.top + 4, 'viewport width:', window.innerWidth);
   };
   
   // Position immediately
@@ -458,20 +486,7 @@ function createSeverityIndicator(input) {
   // Update position on scroll/resize to stay with input
   const updatePosition = () => {
     const rect = input.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    
-    // Position from right edge, but keep within viewport
-    let leftPosition = rect.right - 40;
-    
-    // If off-screen to the right, adjust to be visible
-    if (leftPosition + 40 > viewportWidth) {
-      leftPosition = viewportWidth - 40;
-    }
-    
-    // If off-screen to the left, position inside input
-    if (leftPosition < rect.left) {
-      leftPosition = rect.left + 10;
-    }
+    const leftPosition = findBestPosition(rect);
     
     indicator.style.top = `${rect.top + 4}px`;
     indicator.style.left = `${leftPosition}px`;
