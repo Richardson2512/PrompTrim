@@ -3,59 +3,57 @@
  * Styles for severity indicators and compression modal
  */
 
-/* Severity Indicator with Logo */
-.promptrim-indicator {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: block !important;
+/* PrompTrim Indicator Container */
+.promptrim-indicator-container {
   position: fixed !important;
-  overflow: visible;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
   z-index: 999999 !important;
   pointer-events: auto !important;
   visibility: visible !important;
   opacity: 1 !important;
-  /* Background will be set by JavaScript with icon image */
-  background-size: 32px 32px;
-  background-position: center;
-  background-repeat: no-repeat;
+  cursor: pointer;
 }
 
-.promptrim-indicator:hover {
+.promptrim-indicator-container:hover {
   transform: scale(1.05);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
-/* Severity Dot Overlay */
-.promptrim-indicator::after {
-  content: '';
+/* Logo Image */
+.promptrim-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  display: block;
+}
+
+/* Severity Dot */
+.promptrim-dot {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 12px;
-  height: 12px;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-/* Color the severity dot based on severity */
-.promptrim-indicator.severity-neutral::after {
+.promptrim-dot.severity-neutral {
   background: linear-gradient(135deg, #9ca3af, #6b7280);
 }
 
-.promptrim-indicator.severity-red::after {
+.promptrim-dot.severity-red {
   background: linear-gradient(135deg, #ff4444, #cc0000);
 }
 
-.promptrim-indicator.severity-orange::after {
+.promptrim-dot.severity-orange {
   background: linear-gradient(135deg, #ff8844, #cc6600);
 }
 
-.promptrim-indicator.severity-green::after {
+.promptrim-dot.severity-green {
   background: linear-gradient(135deg, #44ff88, #00cc66);
 }
 

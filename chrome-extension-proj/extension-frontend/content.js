@@ -227,7 +227,9 @@ function handleInputChange(input, indicator) {
   
   if (!text || text.length < 10) {
     // Too short to analyze - show neutral state
-    indicator.className = 'promptrim-indicator severity-neutral';
+    indicator.dataset.severity = 'neutral';
+    const dot = indicator.querySelector('.promptrim-dot');
+    if (dot) dot.className = 'promptrim-dot severity-neutral';
     indicator.setAttribute('title', 'PrompTrim: Start typing to analyze');
     indicator.setAttribute('aria-label', 'PrompTrim ready');
     indicator.dataset.analysis = JSON.stringify({ severity: 'neutral', compressed: text || '' });
@@ -382,18 +384,31 @@ function shouldShowIndicator(severity) {
  * Create severity indicator element
  */
 function createSeverityIndicator(input) {
+  // Create container div
   const indicator = document.createElement('div');
-  indicator.className = 'promptrim-indicator severity-neutral';
+  indicator.className = 'promptrim-indicator-container';
   indicator.setAttribute('role', 'button');
   indicator.setAttribute('aria-label', 'PrompTrim ready');
   indicator.setAttribute('title', 'PrompTrim: Click to optimize your prompt');
   
-  // Load the actual icon from icons folder
+  // Create the logo img element
+  const logoImg = document.createElement('img');
   const extensionId = chrome.runtime.id;
   const iconUrl = `chrome-extension://${extensionId}/icons/icon-48.png`;
-  indicator.style.backgroundImage = `url('${iconUrl}')`;
-  indicator.style.backgroundSize = '32px 32px';
-  indicator.style.backgroundPosition = 'center';
+  logoImg.src = iconUrl;
+  logoImg.alt = 'PrompTrim';
+  logoImg.className = 'promptrim-logo';
+  
+  // Create severity dot
+  const dot = document.createElement('div');
+  dot.className = 'promptrim-dot severity-neutral';
+  
+  // Add them to indicator
+  indicator.appendChild(logoImg);
+  indicator.appendChild(dot);
+  
+  // Store severity in container for easy updates
+  indicator.dataset.severity = 'neutral';
   
   
   // Initial positioning - keep it simple, just to the left of input right edge
@@ -500,7 +515,13 @@ function createSeverityIndicator(input) {
  */
 function showSeverityIndicator(indicator, analysis) {
   indicator.style.display = 'flex';
-  indicator.className = `promptrim-indicator severity-${analysis.severity}`;
+  indicator.dataset.severity = analysis.severity;
+  
+  // Update the dot class
+  const dot = indicator.querySelector('.promptrim-dot');
+  if (dot) {
+    dot.className = `promptrim-dot severity-${analysis.severity}`;
+  }
   
   // Add severity label
   const severityLabels = {
