@@ -394,7 +394,7 @@ function createSeverityIndicator(input) {
   // Create the logo img element
   const logoImg = document.createElement('img');
   const extensionId = chrome.runtime.id;
-  const iconUrl = `chrome-extension://${extensionId}/icons/icon-48.png`;
+  const iconUrl = `chrome-extension://${extensionId}/icons/icon-32.png`;
   logoImg.src = iconUrl;
   logoImg.alt = 'PrompTrim';
   logoImg.className = 'promptrim-logo';
