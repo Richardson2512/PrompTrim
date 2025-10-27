@@ -93,7 +93,6 @@ function stopMonitoring() {
  * Scan page for potential chat inputs
  */
 function scanForInputs() {
-  console.log('🎯 PrompTrim: Scanning for chat inputs...');
   const selectors = [
     // Standard HTML inputs
     'input[type="text"]',
@@ -141,12 +140,10 @@ function scanForInputs() {
     }
   });
   
-  // Process each detected input
-  console.log(`🎯 PrompTrim: Found ${allInputs.length} potential chat inputs`);
-  
+  // Process each detected input (only log when attaching new inputs)
   allInputs.forEach(input => {
     if (!detectedInputs.has(input)) {
-      console.log('🎯 PrompTrim: Attaching indicator to input:', input);
+      console.log('🎯 PrompTrim: Found new chat input, attaching indicator');
       attachToInput(input);
       detectedInputs.set(input, true);
     }
@@ -444,8 +441,6 @@ function createSeverityIndicator(input) {
       }
     }
     
-    console.log('🎯 PrompTrim: Found', existingIcons.length, 'existing icons');
-    
     // Sort icons by position (left to right)
     existingIcons.sort((a, b) => a.left - b.left);
     
@@ -474,8 +469,6 @@ function createSeverityIndicator(input) {
       leftPosition = viewportWidth - indicatorWidth - 10;
     }
     
-    console.log('🎯 PrompTrim: Calculated position:', leftPosition, 'for', existingIcons.length, 'existing icons');
-    
     return leftPosition;
   };
   
@@ -484,11 +477,9 @@ function createSeverityIndicator(input) {
     const rect = input.getBoundingClientRect();
     const leftPosition = findBestPosition(rect);
     
-    indicator.style.top = `${rect.top + 4}px`;
-    indicator.style.left = `${leftPosition}px`;
-    indicator.style.zIndex = '9999999';
-    
-    console.log('🎯 PrompTrim: Positioning indicator at', leftPosition, rect.top + 4, 'viewport width:', window.innerWidth);
+  indicator.style.top = `${rect.top + 4}px`;
+  indicator.style.left = `${leftPosition}px`;
+  indicator.style.zIndex = '9999999';
   };
   
   // Position immediately
@@ -520,14 +511,9 @@ function createSeverityIndicator(input) {
   console.log('🎯 PrompTrim: Adding indicator to DOM', indicator);
   document.body.appendChild(indicator);
   
-  // Verify it's in the DOM
+  // Verify it's in the DOM (silently, no console log spam)
   setTimeout(() => {
     const stillInDOM = document.body.contains(indicator);
-    console.log('🎯 PrompTrim: Indicator still in DOM after 100ms:', stillInDOM);
-    if (stillInDOM) {
-      const rect = indicator.getBoundingClientRect();
-      console.log('🎯 PrompTrim: Indicator position:', rect.top, rect.left, rect.width, rect.height);
-    }
   }, 100);
   
   // Update position on scroll/resize to stay with input
@@ -540,24 +526,27 @@ function createSeverityIndicator(input) {
     indicator.style.zIndex = '9999999';
   };
   
-  // Update position on various events
-  const updateWithInterval = setInterval(updatePosition, 50);
+  // Debounce update function to avoid excessive calls
+  let updateTimeout;
+  const scheduleUpdate = () => {
+    clearTimeout(updateTimeout);
+    updateTimeout = setTimeout(updatePosition, 100); // Update at most once per 100ms
+  };
   
-  const resizeObserver = new ResizeObserver(() => {
-    updatePosition();
-  });
+  // Only update on actual changes (not continuously)
+  const resizeObserver = new ResizeObserver(scheduleUpdate);
   resizeObserver.observe(input);
   
-  // Update on scroll and resize
-  const handleScroll = () => updatePosition();
-  const handleResize = () => updatePosition();
+  // Update on scroll and resize (throttled)
+  const handleScroll = () => scheduleUpdate();
+  const handleResize = () => scheduleUpdate();
   
   window.addEventListener('scroll', handleScroll, true);
   window.addEventListener('resize', handleResize);
   
   // Clean up on page unload
   window.addEventListener('beforeunload', () => {
-    clearInterval(updateWithInterval);
+    clearTimeout(updateTimeout);
     resizeObserver.disconnect();
     window.removeEventListener('scroll', handleScroll, true);
     window.removeEventListener('resize', handleResize);
