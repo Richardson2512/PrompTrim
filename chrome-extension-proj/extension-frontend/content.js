@@ -391,6 +391,14 @@ function createSeverityIndicator(input) {
   indicator.setAttribute('aria-label', 'PrompTrim ready');
   indicator.setAttribute('title', 'PrompTrim: Click to optimize your prompt');
   
+  // Load the actual icon from icons folder
+  const extensionId = chrome.runtime.id;
+  const iconUrl = `chrome-extension://${extensionId}/icons/icon-48.png`;
+  indicator.style.backgroundImage = `url('${iconUrl}')`;
+  indicator.style.backgroundSize = 'cover';
+  indicator.style.backgroundPosition = 'center';
+  console.log('🎯 PrompTrim: Loading icon from', iconUrl);
+  
   // Function to detect existing icons and find best position
   const findBestPosition = (rect) => {
     const viewportWidth = window.innerWidth;
