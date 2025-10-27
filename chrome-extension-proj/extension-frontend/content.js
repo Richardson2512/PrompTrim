@@ -20,6 +20,8 @@ if (document.readyState === 'loading') {
  * Initialize extension
  */
 function init() {
+  console.log('🎯 PrompTrim: Content script loaded on', window.location.href);
+  
   // Load settings
   getSettings();
   
@@ -91,6 +93,7 @@ function stopMonitoring() {
  * Scan page for potential chat inputs
  */
 function scanForInputs() {
+  console.log('🎯 PrompTrim: Scanning for chat inputs...');
   const selectors = [
     // Standard HTML inputs
     'input[type="text"]',
@@ -139,8 +142,11 @@ function scanForInputs() {
   });
   
   // Process each detected input
+  console.log(`🎯 PrompTrim: Found ${allInputs.length} potential chat inputs`);
+  
   allInputs.forEach(input => {
     if (!detectedInputs.has(input)) {
+      console.log('🎯 PrompTrim: Attaching indicator to input:', input);
       attachToInput(input);
       detectedInputs.set(input, true);
     }
