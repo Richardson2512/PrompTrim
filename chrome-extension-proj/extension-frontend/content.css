@@ -7,31 +7,26 @@
 .promptrim-indicator {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: all 0.2s ease;
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
+  display: block !important;
   position: fixed !important;
   overflow: visible;
   z-index: 999999 !important;
   pointer-events: auto !important;
   visibility: visible !important;
   opacity: 1 !important;
-  /* Load actual logo from icons folder via Chrome extension URL */
-  background-image: none;
-  background-size: cover;
+  /* Background will be set by JavaScript with icon image */
+  background-size: 32px 32px;
   background-position: center;
   background-repeat: no-repeat;
 }
 
-/* Icon will be loaded via JavaScript with actual extension ID */
-
 .promptrim-indicator:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  transform: scale(1.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 /* Severity Dot Overlay */

@@ -392,94 +392,26 @@ function createSeverityIndicator(input) {
   const extensionId = chrome.runtime.id;
   const iconUrl = `chrome-extension://${extensionId}/icons/icon-48.png`;
   indicator.style.backgroundImage = `url('${iconUrl}')`;
-  indicator.style.backgroundSize = 'cover';
+  indicator.style.backgroundSize = '32px 32px';
   indicator.style.backgroundPosition = 'center';
-  console.log('🎯 PrompTrim: Loading icon from', iconUrl);
   
-  // Function to detect existing icons and find best position
-  const findBestPosition = (rect) => {
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const indicatorWidth = 36; // 32px icon + 4px margin
-    const iconHeight = 32;
-    
-    // Calculate possible icon positions in the chat input area
-    const inputRight = rect.right;
-    const inputTop = rect.top;
-    const inputBottom = rect.bottom;
-    
-    // Scan for existing icons in the chat input bar area
-    const existingIcons = [];
-    
-    // Check multiple y positions across the input height
-    for (let y = inputTop; y < inputBottom; y += iconHeight) {
-      for (let x = inputRight - 200; x < inputRight + 150; x += 2) {
-        const element = document.elementFromPoint(x, y);
-        
-        if (element && element !== input && element !== indicator) {
-          const elemRect = element.getBoundingClientRect();
-          
-          // Check if it's an icon-like element (size and position constraints)
-          if (elemRect.width >= 24 && elemRect.width <= 50 && 
-              elemRect.height >= 24 && elemRect.height <= 50 &&
-              elemRect.top >= inputTop - 5 && elemRect.bottom <= inputBottom + 5) {
-            
-            // Check if it's not already in our list
-            const alreadyExists = existingIcons.some(icon => 
-              Math.abs(icon.left - elemRect.left) < 5
-            );
-            
-            if (!alreadyExists) {
-              existingIcons.push({
-                left: elemRect.left,
-                right: elemRect.right,
-                width: elemRect.width
-              });
-            }
-          }
-        }
-      }
-    }
-    
-    // Sort icons by position (left to right)
-    existingIcons.sort((a, b) => a.left - b.left);
-    
-    // Try to position between icons or at the start
-    let leftPosition;
-    
-    if (existingIcons.length === 0) {
-      // No existing icons, position at the end of input area
-      leftPosition = inputRight - indicatorWidth;
-    } else {
-      // Position to the left of the first icon
-      leftPosition = existingIcons[0].left - indicatorWidth - 8;
-      
-      // If that would cause overlap, try positioning after the last icon
-      if (leftPosition < inputRight - 250) {
-        leftPosition = existingIcons[existingIcons.length - 1].right + 8;
-      }
-    }
-    
-    // Keep within reasonable bounds
-    if (leftPosition < rect.left + 50) {
-      leftPosition = rect.left + 50;
-    }
-    
-    if (leftPosition + indicatorWidth > viewportWidth - 10) {
-      leftPosition = viewportWidth - indicatorWidth - 10;
-    }
-    
-    return leftPosition;
-  };
   
-  // Initial positioning
+  // Initial positioning - keep it simple, just to the left of input right edge
   const positionIndicator = () => {
     const rect = input.getBoundingClientRect();
-    const leftPosition = findBestPosition(rect);
+    const viewportWidth = window.innerWidth;
     
-  indicator.style.top = `${rect.top + 4}px`;
-  indicator.style.left = `${leftPosition}px`;
-  indicator.style.zIndex = '9999999';
+    // Simple positioning: 40px from right edge of input
+    let leftPosition = rect.right - 40;
+    
+    // Keep within viewport
+    if (leftPosition + 40 > viewportWidth - 10) {
+      leftPosition = viewportWidth - 45;
+    }
+    
+    indicator.style.top = `${rect.top + 4}px`;
+    indicator.style.left = `${leftPosition}px`;
+    indicator.style.zIndex = '9999999';
   };
   
   // Position immediately
@@ -504,11 +436,11 @@ function createSeverityIndicator(input) {
   });
   
   // Show indicator immediately
-  indicator.style.display = 'flex';
+  indicator.style.display = 'block';
   indicator.style.visibility = 'visible';
   indicator.style.opacity = '1';
   
-  console.log('🎯 PrompTrim: Adding indicator to DOM', indicator);
+  console.log('🎯 PrompTrim: Adding indicator to DOM');
   document.body.appendChild(indicator);
   
   // Verify it's in the DOM (silently, no console log spam)
@@ -519,7 +451,15 @@ function createSeverityIndicator(input) {
   // Update position on scroll/resize to stay with input
   const updatePosition = () => {
     const rect = input.getBoundingClientRect();
-    const leftPosition = findBestPosition(rect);
+    const viewportWidth = window.innerWidth;
+    
+    // Simple positioning: 40px from right edge of input
+    let leftPosition = rect.right - 40;
+    
+    // Keep within viewport
+    if (leftPosition + 40 > viewportWidth - 10) {
+      leftPosition = viewportWidth - 45;
+    }
     
     indicator.style.top = `${rect.top + 4}px`;
     indicator.style.left = `${leftPosition}px`;
