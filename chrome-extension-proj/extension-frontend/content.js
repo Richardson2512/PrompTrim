@@ -394,9 +394,26 @@ function createSeverityIndicator(input) {
   // Initial positioning
   const positionIndicator = () => {
     const rect = input.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    
+    // Position from right edge, but keep within viewport
+    let leftPosition = rect.right - 40;
+    
+    // If off-screen to the right, adjust to be visible
+    if (leftPosition + 40 > viewportWidth) {
+      leftPosition = viewportWidth - 40;
+    }
+    
+    // If off-screen to the left, position inside input
+    if (leftPosition < rect.left) {
+      leftPosition = rect.left + 10;
+    }
+    
     indicator.style.top = `${rect.top + 4}px`;
-    indicator.style.left = `${rect.right - 40}px`;
+    indicator.style.left = `${leftPosition}px`;
     indicator.style.zIndex = '9999999';
+    
+    console.log('🎯 PrompTrim: Positioning indicator at', leftPosition, rect.top + 4, 'viewport width:', viewportWidth);
   };
   
   // Position immediately
@@ -441,10 +458,23 @@ function createSeverityIndicator(input) {
   // Update position on scroll/resize to stay with input
   const updatePosition = () => {
     const rect = input.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
     
-    // For fixed positioning, use viewport coordinates directly
+    // Position from right edge, but keep within viewport
+    let leftPosition = rect.right - 40;
+    
+    // If off-screen to the right, adjust to be visible
+    if (leftPosition + 40 > viewportWidth) {
+      leftPosition = viewportWidth - 40;
+    }
+    
+    // If off-screen to the left, position inside input
+    if (leftPosition < rect.left) {
+      leftPosition = rect.left + 10;
+    }
+    
     indicator.style.top = `${rect.top + 4}px`;
-    indicator.style.left = `${rect.right - 40}px`;
+    indicator.style.left = `${leftPosition}px`;
     indicator.style.zIndex = '9999999';
   };
   
