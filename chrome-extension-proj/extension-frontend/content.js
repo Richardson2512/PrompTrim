@@ -370,12 +370,19 @@ function createSeverityIndicator(input) {
   indicator.setAttribute('aria-label', 'PrompTrim ready');
   indicator.setAttribute('title', 'PrompTrim: Click to optimize your prompt');
   
-  // Position inside the input area (like Grammarly/Quillbot)
-  const rect = input.getBoundingClientRect();
-  indicator.style.position = 'fixed';
-  indicator.style.top = `${rect.top + 4}px`;
-  indicator.style.left = `${rect.right - 40}px`; // Position from right edge
-  indicator.style.zIndex = '999999';
+  // Initial positioning
+  const positionIndicator = () => {
+    const rect = input.getBoundingClientRect();
+    indicator.style.top = `${rect.top + 4}px`;
+    indicator.style.left = `${rect.right - 40}px`;
+    indicator.style.zIndex = '9999999';
+  };
+  
+  // Position immediately
+  positionIndicator();
+  
+  // Also try positioning after a short delay to ensure DOM is ready
+  setTimeout(positionIndicator, 100);
   
   // Add click handler
   indicator.addEventListener('click', () => {
@@ -397,15 +404,35 @@ function createSeverityIndicator(input) {
   // Update position on scroll/resize to stay with input
   const updatePosition = () => {
     const rect = input.getBoundingClientRect();
+    
+    // For fixed positioning, use viewport coordinates directly
     indicator.style.top = `${rect.top + 4}px`;
     indicator.style.left = `${rect.right - 40}px`;
+    indicator.style.zIndex = '9999999';
   };
   
-  const resizeObserver = new ResizeObserver(updatePosition);
+  // Update position on various events
+  const updateWithInterval = setInterval(updatePosition, 50);
+  
+  const resizeObserver = new ResizeObserver(() => {
+    updatePosition();
+  });
   resizeObserver.observe(input);
   
-  window.addEventListener('scroll', updatePosition, true);
-  window.addEventListener('resize', updatePosition);
+  // Update on scroll and resize
+  const handleScroll = () => updatePosition();
+  const handleResize = () => updatePosition();
+  
+  window.addEventListener('scroll', handleScroll, true);
+  window.addEventListener('resize', handleResize);
+  
+  // Clean up on page unload
+  window.addEventListener('beforeunload', () => {
+    clearInterval(updateWithInterval);
+    resizeObserver.disconnect();
+    window.removeEventListener('scroll', handleScroll, true);
+    window.removeEventListener('resize', handleResize);
+  });
   
   return indicator;
 }

@@ -9,14 +9,15 @@
   height: 32px;
   border-radius: 8px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   transition: all 0.2s ease;
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: center;
-  position: relative;
+  position: fixed !important;
   overflow: visible;
+  z-index: 999999 !important;
 }
 
 .promptrim-indicator:hover {
