@@ -394,40 +394,79 @@ function createSeverityIndicator(input) {
   // Function to detect existing icons and find best position
   const findBestPosition = (rect) => {
     const viewportWidth = window.innerWidth;
-    const indicatorWidth = 40; // 32px icon + 8px margin
+    const viewportHeight = window.innerHeight;
+    const indicatorWidth = 36; // 32px icon + 4px margin
+    const iconHeight = 32;
     
-    // Start from right edge of input
-    let leftPosition = rect.right - indicatorWidth;
+    // Calculate possible icon positions in the chat input area
+    const inputRight = rect.right;
+    const inputTop = rect.top;
+    const inputBottom = rect.bottom;
     
-    // Check if there are existing icons/extensions to the right of input
-    const rightSideIcons = [];
-    for (let x = leftPosition; x < rect.right + 50; x++) {
-      const element = document.elementFromPoint(x, rect.top + rect.height / 2);
-      if (element && element !== input && element !== indicator) {
-        const elemRect = element.getBoundingClientRect();
-        // Check if it's a small icon (similar size to our indicator)
-        if (elemRect.width > 20 && elemRect.width < 50 && 
-            elemRect.height > 20 && elemRect.height < 50) {
-          rightSideIcons.push(elemRect);
+    // Scan for existing icons in the chat input bar area
+    const existingIcons = [];
+    
+    // Check multiple y positions across the input height
+    for (let y = inputTop; y < inputBottom; y += iconHeight) {
+      for (let x = inputRight - 200; x < inputRight + 150; x += 2) {
+        const element = document.elementFromPoint(x, y);
+        
+        if (element && element !== input && element !== indicator) {
+          const elemRect = element.getBoundingClientRect();
+          
+          // Check if it's an icon-like element (size and position constraints)
+          if (elemRect.width >= 24 && elemRect.width <= 50 && 
+              elemRect.height >= 24 && elemRect.height <= 50 &&
+              elemRect.top >= inputTop - 5 && elemRect.bottom <= inputBottom + 5) {
+            
+            // Check if it's not already in our list
+            const alreadyExists = existingIcons.some(icon => 
+              Math.abs(icon.left - elemRect.left) < 5
+            );
+            
+            if (!alreadyExists) {
+              existingIcons.push({
+                left: elemRect.left,
+                right: elemRect.right,
+                width: elemRect.width
+              });
+            }
+          }
         }
       }
     }
     
-    // If we found icons, position before them (to the left)
-    if (rightSideIcons.length > 0) {
-      const closestIcon = rightSideIcons.sort((a, b) => a.left - b.left)[0];
-      leftPosition = closestIcon.left - indicatorWidth - 5; // 5px spacing
-      console.log('🎯 PrompTrim: Found existing icons, positioning before them at', leftPosition);
+    console.log('🎯 PrompTrim: Found', existingIcons.length, 'existing icons');
+    
+    // Sort icons by position (left to right)
+    existingIcons.sort((a, b) => a.left - b.left);
+    
+    // Try to position between icons or at the start
+    let leftPosition;
+    
+    if (existingIcons.length === 0) {
+      // No existing icons, position at the end of input area
+      leftPosition = inputRight - indicatorWidth;
+    } else {
+      // Position to the left of the first icon
+      leftPosition = existingIcons[0].left - indicatorWidth - 8;
+      
+      // If that would cause overlap, try positioning after the last icon
+      if (leftPosition < inputRight - 250) {
+        leftPosition = existingIcons[existingIcons.length - 1].right + 8;
+      }
     }
     
-    // Keep within viewport bounds
-    if (leftPosition + indicatorWidth > viewportWidth) {
-      leftPosition = viewportWidth - indicatorWidth;
+    // Keep within reasonable bounds
+    if (leftPosition < rect.left + 50) {
+      leftPosition = rect.left + 50;
     }
     
-    if (leftPosition < 10) {
-      leftPosition = rect.left + 10;
+    if (leftPosition + indicatorWidth > viewportWidth - 10) {
+      leftPosition = viewportWidth - indicatorWidth - 10;
     }
+    
+    console.log('🎯 PrompTrim: Calculated position:', leftPosition, 'for', existingIcons.length, 'existing icons');
     
     return leftPosition;
   };

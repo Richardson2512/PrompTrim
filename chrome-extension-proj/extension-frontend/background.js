@@ -24,6 +24,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Indicates async response
   }
   
+  if (request.action === 'getExtensionId') {
+    sendResponse({ extensionId: chrome.runtime.id });
+    return true;
+  }
+  
   if (request.action === 'updateSettings') {
     chrome.storage.local.set(request.settings, () => {
       sendResponse({ success: true });
