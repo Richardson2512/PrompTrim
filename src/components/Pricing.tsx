@@ -32,6 +32,16 @@ const plans = [
     total: '1.5M+',
     bestFor: 'Agencies, apps',
     highlights: ['Input + Output', 'Rules engine', 'SLA & onboarding']
+  },
+  {
+    key: 'ltd',
+    name: 'LTD (Limited-Time Deal)',
+    price: '$499 one-time',
+    input: '—',
+    output: '—',
+    total: '5M/year',
+    bestFor: 'Power users, early adopters',
+    highlights: ['5M tokens/year', 'Overage: $0.01 per 1K', 'Capped to 100 spots']
   }
 ];
 
@@ -57,15 +67,24 @@ const Pricing: React.FC = () => {
                 <div style={{ fontWeight: 700, color: '#FF6B35' }}>{p.price}</div>
               </div>
               <div style={{ marginTop: 8, color: '#6B7280' }}>{p.bestFor}</div>
-              <div style={{ marginTop: 16, border: '1px solid #F3F4F6', borderRadius: 8 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#FAFAFA', borderBottom: '1px solid #E5E7EB', fontWeight: 600 }}>
-                  <div style={{ padding: '10px 16px' }}>Metric</div>
-                  <div style={{ padding: '10px 16px' }}>Limit</div>
+              {p.key !== 'ltd' && (
+                <div style={{ marginTop: 16, border: '1px solid #F3F4F6', borderRadius: 8 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#FAFAFA', borderBottom: '1px solid #E5E7EB', fontWeight: 600 }}>
+                    <div style={{ padding: '10px 16px' }}>Metric</div>
+                    <div style={{ padding: '10px 16px' }}>Limit</div>
+                  </div>
+                  {cell(`Input Tokens: ${p.input}`)}
+                  {cell(`Output Tokens: ${p.output}`)}
+                  {cell(`Total Tokens: ${p.total}`)}
                 </div>
-                {cell(`Input Tokens: ${p.input}`)}
-                {cell(`Output Tokens: ${p.output}`)}
-                {cell(`Total Tokens: ${p.total}`)}
-              </div>
+              )}
+              {p.key === 'ltd' && (
+                <div style={{ marginTop: 16, border: '1px solid #F3F4F6', borderRadius: 8 }}>
+                  {cell('5M Tokens / Year')}
+                  {cell('Overage: $0.01 per 1K (after 5M)')}
+                  {cell('Cap: 100 spots only')}
+                </div>
+              )}
               <ul style={{ marginTop: 16, listStyle: 'none', padding: 0, display: 'grid', gap: 8 }}>
                 {p.highlights.map((h) => (
                   <li key={h} style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#1F1F1F' }}>
@@ -95,29 +114,13 @@ const Pricing: React.FC = () => {
                   e.currentTarget.style.color = '#000000';
                 }}
               >
-                Get started
+                {p.key === 'ltd' ? 'Reserve LTD Spot' : 'Get started'}
               </button>
             </div>
           ))}
         </div>
 
-        {/* Comparison table */}
-        <div style={{ marginTop: 32, border: '1px solid #E5E7EB', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 2fr', background: '#FAFAFA', borderBottom: '1px solid #E5E7EB', fontWeight: 700 }}>
-            {['API Key Type', 'Price', 'Input Tokens', 'Output Tokens', 'Best For'].map((h) => (
-              <div key={h} style={{ padding: '12px 16px' }}>{h}</div>
-            ))}
-          </div>
-          {plans.map((p) => (
-            <div key={p.key} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 2fr', borderBottom: '1px solid #F3F4F6' }}>
-              {cell(p.name)}
-              {cell(p.price)}
-              {cell(p.input)}
-              {cell(p.output)}
-              {cell(p.bestFor)}
-            </div>
-          ))}
-        </div>
+        {/* Removed comparison table per request */}
       </div>
     </div>
   );
