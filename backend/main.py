@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import JSONResponse, StreamingResponse
 import uvicorn
 import uuid
 from contextlib import asynccontextmanager
@@ -23,6 +24,9 @@ from services.tinyllama_service import TinyLlamaService
 from services.docs_chat_service import DocsChatService
 from services.llm_router import LLMRouter
 from services.enhanced_summarizer import QualityAssuredSummarizer, build_quality_summary_response
+from services.rules_engine import OpenAIRules, AnthropicRules, OutputFormat
+from services.token_counter import OpenAITokenCounter
+from database import get_supabase
 from services.grammar_service import get_grammar_service
 
 @asynccontextmanager
@@ -58,6 +62,25 @@ tinyllama_service = TinyLlamaService()
 docs_chat_service = DocsChatService()
 llm_router = LLMRouter()
 qa_summarizer = QualityAssuredSummarizer(similarity_threshold=0.75)
+
+# API key middleware: attach api_key_info for /api/llm/* routes
+@app.middleware("http")
+async def api_key_middleware(request: Request, call_next):
+    try:
+        if request.url.path.startswith("/api/llm"):
+            auth = request.headers.get("Authorization")
+            if not auth or not auth.startswith("Bearer "):
+                return JSONResponse(status_code=401, content={"detail": "Missing API key"})
+            key = auth.split(" ")[1]
+            supabase = get_supabase()
+            res = supabase.table("api_keys").select("optimization_level, user_id").eq("key", key).execute()
+            if not res.data:
+                return JSONResponse(status_code=403, content={"detail": "Invalid API key"})
+            request.state.api_key_info = res.data[0]
+    except Exception:
+        # Do not block non /api/llm routes
+        pass
+    return await call_next(request)
 
 @app.get("/")
 async def root():
@@ -423,15 +446,25 @@ async def correct_grammar(request: PromptOptimizeRequest):
 
 # Overall LLM chat endpoint: input compression -> provider call -> output reduction
 @app.post("/api/llm/chat", response_model=LLMChatResponse)
-async def llm_chat(request: LLMChatRequest):
+async def llm_chat(request: LLMChatRequest, req: Request):
     try:
+        # Resolve optimization level from API key (if present)
+        api_level = None
+        if hasattr(req.state, "api_key_info"):
+            api_level = req.state.api_key_info.get("optimization_level")
+
         # Map optimization level to compression ratio
         compression_ratios = {
             "minimal": 0.8,
             "moderate": 0.5,
             "aggressive": 0.3
         }
-        compression_ratio = compression_ratios.get(request.optimization_level, 0.5)
+        # numeric levels 1=light, 2=moderate, 3=aggressive
+        numeric_map = {1: "minimal", 2: "moderate", 3: "aggressive"}
+        effective_level = request.optimization_level
+        if isinstance(api_level, int) and api_level in numeric_map:
+            effective_level = numeric_map[api_level]
+        compression_ratio = compression_ratios.get(effective_level, 0.5)
 
         # Input compression using TinyLlama
         compressed = tinyllama_service.compress_prompt(
@@ -462,12 +495,32 @@ async def llm_chat(request: LLMChatRequest):
         prompt_tokens_est = llm_router.estimate_tokens(request.provider, optimized_prompt)
         output_tokens_est = llm_router.estimate_tokens(request.provider, raw_output)
 
-        # Build response
-        original = max(1, len(raw_output.split()))
-        compressed_tokens = len(final_summary.split())
-        reduction_percent = round(((original - compressed_tokens) / original) * 100, 2)
+        # Build response + token breakdown
+        original_output_tokens = max(1, len(raw_output.split()))
+        compressed_output_tokens = len(final_summary.split())
+        reduction_percent = round(((original_output_tokens - compressed_output_tokens) / original_output_tokens) * 100, 2)
 
-        return LLMChatResponse(
+        # Optional: detailed tokens object for OpenAI using exact counts
+        tokens_detail = None
+        if request.provider.lower() == "openai":
+            model_name = request.model or "gpt-4o-mini"
+            input_counts = OpenAITokenCounter.count_batch([request.prompt, optimized_prompt], model=model_name)
+            output_counts = OpenAITokenCounter.count_batch([raw_output, final_summary], model=model_name)
+            input_original, input_compressed = input_counts
+            output_original, output_final = output_counts
+            total_saved = max(0, (input_original + output_original) - (input_compressed + output_final))
+            efficiency = 0.0
+            denom = (input_original + output_original)
+            if denom > 0:
+                efficiency = round(1 - ((input_compressed + output_final) / denom), 3)
+            tokens_detail = {
+                "input": {"original": input_original, "compressed": input_compressed, "saved": input_original - input_compressed},
+                "output": {"original": output_original, "final": output_final, "saved": output_original - output_final},
+                "total_saved": total_saved,
+                "efficiency": efficiency,
+            }
+
+        response_payload = LLMChatResponse(
             provider=request.provider,
             model=(request.model or ""),
             prompt_tokens_est=prompt_tokens_est,
@@ -478,6 +531,16 @@ async def llm_chat(request: LLMChatRequest):
             iterations_used=iterations,
             reduction_percent=reduction_percent
         )
+
+        # Attach non-modeled extra section when OpenAI (exact breakdown)
+        if tokens_detail is not None:
+            # FastAPI will include extra fields if we return a dict
+            base = response_payload.model_dump()
+            base["tokens"] = tokens_detail
+            base["optimization_level"] = api_level if api_level is not None else effective_level
+            return base
+
+        return response_payload
     except HTTPException:
         raise
     except Exception as e:
@@ -508,6 +571,55 @@ async def reduce_output(request: OutputReduceRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Output reduction failed: {str(e)}")
+
+
+# Optional: OpenAI streaming (text/plain). Only for provider=openai
+@app.post("/api/llm/stream")
+async def stream_chat(request: LLMChatRequest):
+    if request.provider.lower() != "openai":
+        raise HTTPException(status_code=400, detail="Streaming supported only for OpenAI provider")
+
+    async def _generator():
+        try:
+            # Compress input first
+            compression_ratios = {"minimal": 0.8, "moderate": 0.5, "aggressive": 0.3}
+            compression_ratio = compression_ratios.get(request.optimization_level, 0.5)
+            compressed = tinyllama_service.compress_prompt(prompt=request.prompt, compression_ratio=compression_ratio)
+            optimized_prompt = compressed.get("optimized_prompt", request.prompt)
+
+            # Use OpenAI streaming via httpx
+            import os
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                yield "[Streaming error: OPENAI_API_KEY not configured]"
+                return
+            url = "https://api.openai.com/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+            payload = {
+                "model": request.model or "gpt-4o-mini",
+                "messages": [{"role": "user", "content": optimized_prompt}],
+                "stream": True,
+                "max_tokens": request.max_output_tokens,
+            }
+            async with httpx.AsyncClient(timeout=None) as client:
+                async with client.stream("POST", url, headers=headers, json=payload) as resp:
+                    async for line in resp.aiter_lines():
+                        if not line or not line.startswith("data:"):
+                            continue
+                        data = line[5:].strip()
+                        if data == "[DONE]":
+                            break
+                        try:
+                            obj = json.loads(data)
+                            delta = obj.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                            if delta:
+                                yield delta
+                        except Exception:
+                            continue
+        except Exception as e:
+            yield f"[Streaming error: {str(e)}]"
+
+    return StreamingResponse(_generator(), media_type="text/plain")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

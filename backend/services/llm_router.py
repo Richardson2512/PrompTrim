@@ -2,6 +2,7 @@ import os
 from typing import Any, Dict, Optional
 
 import httpx
+from .token_counter import OpenAITokenCounter
 
 
 class LLMRouter:
@@ -129,19 +130,19 @@ class LLMRouter:
     def estimate_tokens(self, provider: str, text: str) -> int:
         provider = (provider or "").lower()
         if provider == "openai":
+            # Use exact OpenAI token counter (tiktoken) only for OpenAI branch
             try:
-                import tiktoken
-                enc = tiktoken.get_encoding("cl100k_base")
-                return len(enc.encode(text))
+                model = self.default_models.get("openai", "gpt-4o-mini")
+                return OpenAITokenCounter.count(text or "", model=model)
             except Exception:
-                return max(1, len(text) // 4)
+                return max(1, len(text or "") // 4)
         if provider == "anthropic":
             # Claude tokens ~ characters/4 as a rough estimate
-            return max(1, len(text) // 4)
+            return max(1, len(text or "") // 4)
         if provider == "grok":
             # Approximate similar to GPT-3.5/4
-            return max(1, len(text) // 4)
+            return max(1, len(text or "") // 4)
         # Custom unknown model
-        return max(1, len(text) // 4)
+        return max(1, len(text or "") // 4)
 
 
