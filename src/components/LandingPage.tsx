@@ -1004,7 +1004,7 @@ const LandingPage = () => {
             
             {/* Photos Button */}
             <button
-              onClick={() => handleNavigation('pricing')}
+              onClick={() => navigateTo('pricing')}
               style={{
                 boxSizing: 'border-box',
                 display: 'flex',
