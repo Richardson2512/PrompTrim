@@ -27,7 +27,7 @@ class APIKeyBase(BaseModel):
     name: str
 
 class APIKeyCreate(APIKeyBase):
-    key_type: str = "output"  # "input" or "output"
+    key_type: str = "output"  # "input" | "output" | "overall"
     optimization_level: str = "moderate"  # "aggressive", "moderate", or "minimal"
 
 class APIKeyResponse(APIKeyBase):

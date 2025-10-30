@@ -20,7 +20,7 @@ const ApiKeyManager = () => {
   const { user, profile: authProfile, loading: authLoading } = useAuth();
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newKeyName, setNewKeyName] = useState('');
-  const [newKeyType, setNewKeyType] = useState<'backend' | 'overall'>('backend');
+  const [newKeyType, setNewKeyType] = useState<'input' | 'output' | 'overall'>('input');
   const [newKeyOptimizationLevel, setNewKeyOptimizationLevel] = useState<'aggressive' | 'moderate' | 'minimal'>('moderate');
   const [isCreating, setIsCreating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -600,7 +600,7 @@ const ApiKeyManager = () => {
               Key Type
             </label>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {(['backend', 'overall'] as const).map(type => (
+              {(['input', 'output', 'overall'] as const).map(type => (
                 <button
                   key={type}
                   type="button"
@@ -642,7 +642,7 @@ const ApiKeyManager = () => {
               margin: '8px 0 0 0',
               fontFamily: 'JetBrains Mono, monospace'
             }}>
-              Backend key: for output reduction and routing. Overall key: full pipeline (input+output).
+              Input: input compression only. Output: output reduction/routing. Overall: full pipeline (input+output).
             </p>
           </div>
 
