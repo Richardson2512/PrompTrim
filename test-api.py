@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""
+Test script for PromptTrim API
+"""
+
+import requests
+import json
+import time
+
+def test_api():
+    base_url = "http://localhost:8000"
+    
+    print("Testing PromptTrim API")
+    print("=" * 50)
+    
+    # Test 1: Health Check
+    print("\n1. Testing Health Check...")
+    try:
+        response = requests.get(f"{base_url}/health")
+        if response.status_code == 200:
+            print("+ Health check passed")
+            print(f"   Response: {response.json()}")
+        else:
+            print(f"- Health check failed: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"- Health check error: {e}")
+        return False
+    
+    # Test 2: Create Profile
+    print("\n2. Testing Profile Creation...")
+    user_id = "test-user-123"
+    profile_data = {
+        "email": "test@example.com",
+        "first_name": "Test",
+        "last_name": "User"
+    }
+    
+    try:
+        response = requests.post(f"{base_url}/auth/create-profile", 
+                               params={"user_id": user_id},
+                               json=profile_data)
+        if response.status_code == 200:
+            print("+ Profile creation passed")
+            print(f"   Profile: {response.json()}")
+        else:
+            print(f"- Profile creation failed: {response.status_code}")
+            print(f"   Error: {response.text}")
+    except Exception as e:
+        print(f"- Profile creation error: {e}")
+    
+    # Test 3: Create API Key
+    print("\n3. Testing API Key Creation...")
+    try:
+        response = requests.post(f"{base_url}/api-keys/{user_id}",
+                               json={"name": "Test API Key"})
+        if response.status_code == 200:
+            print("+ API key creation passed")
+            api_key_data = response.json()
+            print(f"   API Key: {api_key_data}")
+        else:
+            print(f"- API key creation failed: {response.status_code}")
+            print(f"   Error: {response.text}")
+    except Exception as e:
+        print(f"- API key creation error: {e}")
+    
+    # Test 4: Optimize Prompt
+    print("\n4. Testing Prompt Optimization...")
+    test_prompt = "Write a detailed analysis of the current market trends in artificial intelligence, including machine learning, deep learning, and natural language processing technologies, their applications, challenges, and future prospects."
+    
+    try:
+        response = requests.post(f"{base_url}/optimize/{user_id}",
+                               json={
+                                   "prompt": test_prompt,
+                                   "optimization_level": "moderate",
+                                   "language": "en"
+                               })
+        if response.status_code == 200:
+            print("+ Prompt optimization passed")
+            result = response.json()
+            print(f"   Original tokens: {result['original_token_count']}")
+            print(f"   Optimized tokens: {result['optimized_token_count']}")
+            print(f"   Tokens saved: {result['tokens_saved']}")
+            print(f"   Cost saved: ${result['cost_saved_usd']:.4f}")
+        else:
+            print(f"- Prompt optimization failed: {response.status_code}")
+            print(f"   Error: {response.text}")
+    except Exception as e:
+        print(f"- Prompt optimization error: {e}")
+    
+    # Test 5: Get Analytics
+    print("\n5. Testing Analytics...")
+    try:
+        response = requests.get(f"{base_url}/analytics/usage/{user_id}")
+        if response.status_code == 200:
+            print("+ Analytics passed")
+            analytics = response.json()
+            print(f"   Analytics: {analytics}")
+        else:
+            print(f"- Analytics failed: {response.status_code}")
+            print(f"   Error: {response.text}")
+    except Exception as e:
+        print(f"- Analytics error: {e}")
+    
+    print("\n" + "=" * 50)
+    print("API testing completed!")
+    return True
+
+if __name__ == "__main__":
+    test_api()

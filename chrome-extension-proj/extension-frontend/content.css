@@ -3,69 +3,245 @@
  * Styles for severity indicators and compression modal
  */
 
-/* PrompTrim Indicator Container - Grammarly/Quillbot style */
+/* PrompTrim Indicator Container - Shows severity dot only */
+/* Default: 32px × 32px container with severity dot */
+/* Start hidden by default to prevent flash, JavaScript will make visible if needed */
 .promptrim-indicator-container {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+  background: transparent;
+  border: none;
+  box-shadow: none;
   position: fixed !important;
-  display: flex !important;
+  display: none !important; /* Start hidden */
   align-items: center;
   justify-content: center;
   z-index: 2147483647 !important;
   pointer-events: auto !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  cursor: pointer;
-  transition: box-shadow 0.2s, background 0.2s;
+  visibility: hidden !important; /* Start hidden */
+  opacity: 0 !important; /* Start hidden */
+  cursor: move;
+  cursor: grab;
+  transition: transform 0.2s;
   overflow: visible;
 }
 
-.promptrim-indicator-container:hover {
-  background: #f4f6fa;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.17);
+/* Show indicators when explicitly enabled */
+.promptrim-indicator-container.promptrim-visible {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
-/* Logo Image */
-.promptrim-logo {
-  width: 20px;
-  height: 20px;
-  display: block;
-  border: none;
-  padding: 0;
-  margin: 0;
+/* Hide indicators when modal is open - uses !important to override above flags */
+.promptrim-indicator-container.promptrim-hidden-for-modal {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -1 !important; /* Send to back */
+  left: -9999px !important; /* Move off-screen */
+  top: -9999px !important; /* Move off-screen */
+}
+
+
+/* Narrow inputs: 24px × 24px */
+.promptrim-indicator-container[data-icon-size="24"] {
+  width: 24px;
+  height: 24px;
+}
+
+/* Standard size: 32px × 32px (explicit) */
+.promptrim-indicator-container[data-icon-size="32"] {
+  width: 32px;
+  height: 32px;
+}
+
+/* Hover state - subtle scale increase */
+.promptrim-indicator-container:hover {
+  transform: translateY(-2px) scale(1.1);
+}
+
+/* Active dragging state */
+.promptrim-indicator-container:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+}
+
+
+/* Logo Container - Hidden by default to prevent flash */
+.promptrim-logo-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none !important; /* Hidden by default - use !important to prevent flash */
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
 }
 
-/* Severity Dot */
+/* Show logo when floating logo is enabled */
+.promptrim-show-logo .promptrim-logo-container {
+  display: flex !important;
+}
+
+/* Logo Image Styling */
+.promptrim-logo-image {
+  width: 100%;
+  height: 100%;
+  max-width: 32px;
+  max-height: 32px;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  object-fit: cover;
+  border: none;
+  padding: 0;
+  margin: 0;
+  transition: filter 0.2s, transform 0.2s;
+}
+
+/* Hover effect on logo */
+.promptrim-indicator-container:hover .promptrim-logo-image {
+  filter: contrast(1.2) saturate(1.1) brightness(1.05);
+  transform: scale(1.05);
+}
+
+/* Adjust logo size for narrow containers */
+.promptrim-indicator-container[data-icon-size="24"] .promptrim-logo-image {
+  max-width: 24px;
+  max-height: 24px;
+}
+
+/* Severity Dot - Enhanced visibility */
+/* 10px dot for 32px container */
 .promptrim-dot {
   position: absolute;
   top: 2px;
   right: 2px;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  border: 2px solid white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border: 1.5px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   pointer-events: none;
 }
 
+/* 8px dot for 24px container */
+.promptrim-indicator-container[data-icon-size="24"] .promptrim-dot {
+  width: 8px;
+  height: 8px;
+  top: 1px;
+  right: 1px;
+  border-width: 1px;
+}
+
+/* Severity colors with high contrast */
 .promptrim-dot.severity-neutral {
-  background: linear-gradient(135deg, #9ca3af, #6b7280);
+  background: linear-gradient(135deg, #6b7280, #4b5563);
 }
 
 .promptrim-dot.severity-red {
-  background: linear-gradient(135deg, #ff4444, #cc0000);
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+/* Close Button */
+.promptrim-close-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 18px;
+  height: 18px;
+  background: #ef4444;
+  color: white;
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.promptrim-indicator-container:hover .promptrim-close-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.promptrim-close-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.promptrim-close-btn:active {
+  transform: scale(0.95);
+}
+
+/* Narrow container close button */
+.promptrim-indicator-container[data-icon-size="24"] .promptrim-close-btn {
+  width: 16px;
+  height: 16px;
+  font-size: 12px;
+  top: -6px;
+  right: -6px;
 }
 
 .promptrim-dot.severity-orange {
-  background: linear-gradient(135deg, #ff8844, #cc6600);
+  background: linear-gradient(135deg, #f97316, #ea580c);
 }
 
 .promptrim-dot.severity-green {
-  background: linear-gradient(135deg, #44ff88, #00cc66);
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+/* Enhanced visibility for light/white backgrounds - removed borders, keep transparent */
+.promptrim-indicator-container[data-light-bg="true"] {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.promptrim-indicator-container[data-light-bg="true"]:hover {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+/* High contrast support for white backgrounds */
+@media (prefers-contrast: high) {
+  .promptrim-indicator-container {
+    border: 2px solid #000;
+    background: #fff;
+  }
+  
+  .promptrim-indicator-container:hover {
+    border-color: #0066cc;
+    background: #e6f2ff;
+  }
+  
+  .promptrim-indicator-container[data-light-bg="true"] {
+    background: transparent;
+    border: none;
+  }
+}
+
+/* Debug mode - show hitboxes */
+.promptrim-debug .promptrim-indicator-container::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 2px dashed red;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Modal Overlay */
@@ -79,7 +255,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000000;
+  z-index: 2147483648 !important; /* Higher than indicator's z-index */
   animation: promptrim-fade-in 0.2s ease;
 }
 
@@ -176,7 +352,7 @@
 }
 
 .promptrim-savings {
-  color: #10b981;
+  color: #ff6600;
   font-weight: 600;
   margin-left: 8px;
 }
@@ -192,6 +368,27 @@
   color: #1f2937;
   white-space: pre-wrap;
   word-wrap: break-word;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* Custom scrollbar for prompt text */
+.promptrim-text::-webkit-scrollbar {
+  width: 8px;
+}
+
+.promptrim-text::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.promptrim-text::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.promptrim-text::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .promptrim-original .promptrim-text {
@@ -199,16 +396,80 @@
 }
 
 .promptrim-compressed .promptrim-text {
-  border-left: 4px solid #10b981;
+  border-left: 4px solid #ff6600;
+}
+
+/* Grammar Correction Badge */
+.promptrim-grammar-info {
+  margin-bottom: 12px;
+}
+
+.promptrim-grammar-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #166534;
+  line-height: 1.4;
+}
+
+/* Stats Display */
+.promptrim-stats {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.promptrim-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.promptrim-stat-label {
+  font-weight: 600;
+  color: #64748b;
+  min-width: 60px;
+}
+
+.promptrim-stat-value {
+  color: #1e293b;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}
+
+.promptrim-stat-savings {
+  color: #22c55e;
+  font-weight: 700;
+  font-size: 12px;
+  margin-left: auto;
+  padding: 2px 8px;
+  background: #dcfce7;
+  border-radius: 4px;
 }
 
 /* Modal Footer */
 .promptrim-modal-footer {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   padding: 20px 24px;
   border-top: 1px solid #e5e7eb;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.promptrim-footer-actions {
+  display: flex;
+  gap: 8px;
 }
 
 /* Buttons */
@@ -226,34 +487,50 @@
 }
 
 .promptrim-accept {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, #ff6600, #cc4400);
   color: white;
 }
 
 .promptrim-accept:hover {
-  background: linear-gradient(135deg, #059669, #047857);
+  background: linear-gradient(135deg, #ff7733, #cc5500);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 102, 0, 0.3);
 }
 
 .promptrim-accept:focus {
-  outline: 2px solid #10b981;
+  outline: 2px solid #ff6600;
   outline-offset: 2px;
 }
 
 .promptrim-reject {
-  background: #f3f4f6;
-  color: #4b5563;
+  background: #1a1a1a;
+  color: #ffffff;
 }
 
 .promptrim-reject:hover {
-  background: #e5e7eb;
-  color: #1f2937;
+  background: #2a2a2a;
+  color: #ffffff;
   transform: translateY(-2px);
 }
 
 .promptrim-reject:focus {
-  outline: 2px solid #6b7280;
+  outline: 2px solid #ff6600;
+  outline-offset: 2px;
+}
+
+.promptrim-dashboard {
+  background: linear-gradient(135deg, #333333, #000000);
+  color: white;
+}
+
+.promptrim-dashboard:hover {
+  background: linear-gradient(135deg, #404040, #1a1a1a);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.promptrim-dashboard:focus {
+  outline: 2px solid #ff6600;
   outline-offset: 2px;
 }
 
@@ -272,6 +549,11 @@
   
   .promptrim-modal-footer {
     flex-direction: column;
+  }
+  
+  .promptrim-footer-actions {
+    flex-direction: column;
+    width: 100%;
   }
   
   .promptrim-btn {
@@ -308,4 +590,5 @@
     transition: none;
   }
 }
+
 

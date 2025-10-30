@@ -6,7 +6,8 @@
   
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "tabs"
   ],
   
   "host_permissions": [
@@ -20,10 +21,15 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": [
+        "compression.js",
+        "grammar-check.js",
+        "ui-indicator.js",
+        "content-script-core.js"
+      ],
       "css": ["content.css"],
       "run_at": "document_idle",
-      "all_frames": true
+      "all_frames": false
     }
   ],
   
@@ -45,7 +51,7 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["modal.html", "icons/*.png"],
+      "resources": ["modal.html", "icons/*.png", "public/favicon.png"],
       "matches": ["<all_urls>"]
     }
   ]

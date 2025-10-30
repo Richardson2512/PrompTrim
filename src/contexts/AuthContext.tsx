@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, Profile, isSupabaseConfigured } from '../lib/supabase';
 
@@ -30,11 +30,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const isInitializedRef = useRef(false);
 
   console.log('🔧 AuthProvider render:', { user: !!user, profile: !!profile, loading, isSigningOut });
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     if (!isSupabaseConfigured()) {
       console.warn('⚠️ Supabase not configured, skipping profile fetch');
       return null;
@@ -57,24 +56,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Profile fetch failed:', error);
       return null;
     }
-  };
+  }, []);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (user) {
       const profileData = await fetchProfile(user.id);
       setProfile(profileData);
     }
-  };
+  }, [user, fetchProfile]);
 
   useEffect(() => {
-    if (isInitializedRef.current) {
-      console.log('🔄 AuthProvider already initialized, skipping...');
-      return;
-    }
-
-    console.log('🚀 AuthProvider initializing for the first time...');
-    isInitializedRef.current = true;
-
     if (!isSupabaseConfigured()) {
       console.warn('⚠️ Supabase is not configured. Please set up your .env file with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
       setLoading(false);
@@ -108,11 +99,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     handleEmailConfirmation();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state change:', { event, hasUser: !!session?.user, userId: session?.user?.id });
+      console.log('🔄 AuthContext: Auth state change event:', event);
+      console.log('🔄 AuthContext: Session:', { hasUser: !!session?.user, userId: session?.user?.id, userEmail: session?.user?.email });
       try {
+        console.log('🔧 AuthContext: Setting user state to:', !!session?.user);
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          console.log('🔧 User session exists, fetching profile...');
           try {
             let profileData = await fetchProfile(session.user.id);
             
@@ -142,6 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             
             setProfile(profileData);
+            console.log('✅ Profile set:', !!profileData);
           } catch (profileError) {
             console.error('Profile handling error:', profileError);
             setProfile(null);
@@ -154,6 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Auth state change error:', error);
       } finally {
         setLoading(false);
+        console.log('✅ Auth state change handler completed');
       }
     });
 
@@ -161,7 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
     if (!isSupabaseConfigured()) {
@@ -197,9 +193,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('Please configure Supabase credentials in your .env file to use authentication features.');
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
+    console.log('🔑 AuthContext: Calling supabase.auth.signInWithPassword...');
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
+    });
+
+    console.log('🔑 AuthContext: SignIn response:', { 
+      hasUser: !!data?.user, 
+      userId: data?.user?.id,
+      error: error?.message 
     });
 
     if (error) {
@@ -212,6 +215,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Invalid email or password. Please check your credentials and try again.');
       }
       throw error;
+    }
+
+    // Manually update user state if we got a user from signIn
+    if (data?.user) {
+      console.log('🔧 AuthContext: Manually updating user state after signIn');
+      setUser(data.user);
+      
+      // Fetch and set profile
+      try {
+        const profileData = await fetchProfile(data.user.id);
+        setProfile(profileData);
+        console.log('✅ AuthContext: Profile fetched:', !!profileData);
+      } catch (profileError) {
+        console.error('❌ AuthContext: Profile fetch failed:', profileError);
+      }
     }
   };
 
@@ -232,24 +250,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       console.log('🔄 Calling supabase.auth.signOut()...');
+      
+      // Call signOut - this will trigger the auth state change listener
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('❌ Supabase signOut error:', error);
-        // Don't throw here, still clear local state
+        // Even on error, clear local state
+        setUser(null);
+        setProfile(null);
+        throw error;
       } else {
         console.log('✅ Supabase signOut successful');
       }
       
-      // Always clear local state regardless of Supabase response
-      console.log('🔄 Clearing local state...');
+      // Manually clear state to ensure it's cleared even if listener doesn't fire
+      // The listener will confirm this
       setUser(null);
       setProfile(null);
-      console.log('✅ Successfully signed out and cleared state');
-      console.log('🎯 Logout process completed - user should be redirected to landing page');
+      
+      console.log('✅ Sign out completed - state cleared');
       
     } catch (error) {
       console.error('❌ Sign out failed:', error);
-      // Even if everything fails, clear local state
+      // Always clear local state
       console.log('🔄 Force clearing local state...');
       setUser(null);
       setProfile(null);

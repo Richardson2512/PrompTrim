@@ -13,13 +13,27 @@ export const AuthForm: React.FC = () => {
   const [error, setError] = useState('');
   const [signupSuccess, setSignupSuccess] = useState(false);
 
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   const { currentRoute, navigateTo } = useRouter();
 
-  // Set login/signup mode based on route
+  // Set login/signup mode based on route and clear form when switching
   useEffect(() => {
-    setIsLogin(currentRoute === 'login');
+    const newIsLogin = currentRoute === 'login';
+    setIsLogin(newIsLogin);
+    
+    // Clear form when switching between login and signup
+    setEmail('');
+    setPassword('');
+    setFirstName('');
+    setLastName('');
+    setError('');
+    setSignupSuccess(false);
   }, [currentRoute]);
+
+  // Watch for auth state changes
+  useEffect(() => {
+    console.log('🔍 AuthForm - user state changed:', !!user);
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,16 +43,29 @@ export const AuthForm: React.FC = () => {
 
     try {
       if (isLogin) {
+        console.log('🔑 Calling signIn...');
         await signIn(email, password);
-            } else {
-              await signUp(email, password, firstName, lastName);
-              setSignupSuccess(true);
-              // Clear form after successful signup
-              setEmail('');
-              setPassword('');
-              setFirstName('');
-              setLastName('');
-            }
+        console.log('✅ signIn successful');
+        
+        // Wait a bit for the auth state to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log('🔍 Checking user state after signIn:', !!user);
+        
+        // The redirect will be handled by App.tsx based on intendedRoute
+        // No need to navigate here - App.tsx will handle it after auth state changes
+      } else {
+        await signUp(email, password, firstName, lastName);
+        setSignupSuccess(true);
+        // Clear form after successful signup
+        setEmail('');
+        setPassword('');
+        setFirstName('');
+        setLastName('');
+        // Redirect to API keys page after successful signup
+        setTimeout(() => {
+          navigateTo('api-keys');
+        }, 2000); // Wait 2 seconds to show success message
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);

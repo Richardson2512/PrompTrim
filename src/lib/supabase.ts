@@ -13,7 +13,16 @@ export const isSupabaseConfigured = () => {
 // Create Supabase client - no mock client
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co', 
-  supabaseAnonKey || 'placeholder-key'
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      storageKey: 'prompttrim-auth-token'
+    }
+  }
 );
 
 export interface Profile {

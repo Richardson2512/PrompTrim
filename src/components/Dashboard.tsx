@@ -1,19 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useRouter } from '../contexts/RouterContext';
 import { 
   BarChart3, 
-  TrendingUp, 
   DollarSign, 
   Zap, 
   Activity,
-  Menu,
-  X,
   Download,
   Settings,
   LogOut,
   Brain,
   Target,
-  PieChart,
   ArrowUpRight,
   ArrowDownRight,
   HelpCircle,
@@ -24,13 +21,8 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Users,
-  Globe,
-  Monitor,
-  Smartphone,
   User,
-  Star,
-  TrendingDown
+  Key,
 } from 'lucide-react';
 
 interface MetricCardProps {
@@ -77,116 +69,337 @@ interface PromptUsage {
   category: string;
 }
 
+interface AnalyticsData {
+  total_prompts: number;
+  total_tokens_saved: number;
+  total_cost_saved_usd: number;
+  avg_compression_rate: number;
+  prompts_this_month: number;
+}
+
+interface PromptHistory {
+  id: string;
+  original_prompt: string;
+  optimized_prompt: string;
+  original_token_count: number;
+  optimized_token_count: number;
+  tokens_saved: number;
+  cost_saved_usd: number;
+  optimization_level: string;
+  created_at: string;
+}
+
 const Dashboard: React.FC = () => {
   const { user, profile, signOut, isSigningOut } = useAuth();
+  const { navigateTo } = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<'highest' | 'lowest'>('highest');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [promptHistory, setPromptHistory] = useState<PromptHistory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  
+  // Create retry function that can be called from button
+  const retryFetch = useCallback(() => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    setError(null);
+    setDataLoaded(false);
+    
+    const fetchData = async () => {
+      try {
+        const analyticsUrl = `http://localhost:8000/analytics/usage/${user.id}`;
+        const historyUrl = `http://localhost:8000/prompts/history/${user.id}`;
+        
+        const timeout = (ms: number) => new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout')), ms)
+        );
+        
+        const analyticsPromise = Promise.race([fetch(analyticsUrl), timeout(5000)]).catch(() => null) as Promise<Response | null>;
+        const historyPromise = Promise.race([fetch(historyUrl), timeout(5000)]).catch(() => null) as Promise<Response | null>;
+        
+        const [analyticsResponse, historyResponse] = await Promise.all([analyticsPromise, historyPromise]);
 
-  // Mock data - in real app, this would come from your API
-  const metrics = {
-    promptsRecommended: 1247,
-    promptsOptimized: 892,
-    tokensSaved: 77778,
-    moneySaved: 116.67,
-    optimizationRate: 71.5,
-    avgTokenReduction: 33.2
-  };
+        if (analyticsResponse && analyticsResponse.ok) {
+          const analytics = await analyticsResponse.json();
+          setAnalyticsData(analytics);
+        } else {
+          setAnalyticsData({ total_prompts: 0, total_tokens_saved: 0, total_cost_saved_usd: 0, avg_compression_rate: 0, prompts_this_month: 0 });
+        }
 
-  const mostUsedPrompts: PromptUsage[] = [
-    { prompt: "Write a professional email to...", count: 45, tokensSaved: 2340, category: "Communication" },
-    { prompt: "Write a security audit report for...", count: 43, tokensSaved: 2150, category: "Security" },
-    { prompt: "Debug this Python function...", count: 42, tokensSaved: 2200, category: "Development" },
-    { prompt: "Generate integration tests for...", count: 41, tokensSaved: 2050, category: "Testing" },
-    { prompt: "Create a deployment checklist for...", count: 40, tokensSaved: 2000, category: "DevOps" },
-    { prompt: "Translate this document to Spanish...", count: 39, tokensSaved: 1980, category: "Translation" },
-    { prompt: "Generate code for a React component...", count: 38, tokensSaved: 1890, category: "Development" },
-    { prompt: "Write a blog post about...", count: 37, tokensSaved: 1850, category: "Content" },
-    { prompt: "Write a feature request template for...", count: 36, tokensSaved: 1800, category: "Project Management" },
-    { prompt: "Create a SQL query for...", count: 35, tokensSaved: 1750, category: "Development" },
-    { prompt: "Generate error handling code for...", count: 34, tokensSaved: 1700, category: "Development" },
-    { prompt: "Generate test cases for...", count: 33, tokensSaved: 1650, category: "Testing" },
-    { prompt: "Create a monitoring dashboard for...", count: 33, tokensSaved: 1650, category: "DevOps" },
-    { prompt: "Summarize the following text...", count: 32, tokensSaved: 1567, category: "Content" },
-    { prompt: "Write a performance optimization guide...", count: 32, tokensSaved: 1600, category: "Documentation" },
-    { prompt: "Review this code and suggest improvements...", count: 31, tokensSaved: 1550, category: "Development" },
-    { prompt: "Generate a backup strategy for...", count: 31, tokensSaved: 1550, category: "DevOps" },
-    { prompt: "Write a product description for...", count: 30, tokensSaved: 1500, category: "Marketing" },
-    { prompt: "Create a CI/CD pipeline for...", count: 30, tokensSaved: 1500, category: "DevOps" },
-    { prompt: "Create a project timeline for...", count: 29, tokensSaved: 1450, category: "Project Management" },
-    { prompt: "Write a disaster recovery plan for...", count: 29, tokensSaved: 1450, category: "Business" },
-    { prompt: "Explain this concept in simple terms...", count: 28, tokensSaved: 1234, category: "Education" },
-    { prompt: "Draft a meeting agenda for...", count: 27, tokensSaved: 1350, category: "Communication" },
-    { prompt: "Generate API documentation for...", count: 26, tokensSaved: 1300, category: "Documentation" },
-    { prompt: "Write a customer support response...", count: 25, tokensSaved: 1250, category: "Support" },
-    { prompt: "Create a marketing strategy for...", count: 24, tokensSaved: 2100, category: "Marketing" },
-    { prompt: "Create social media posts for...", count: 24, tokensSaved: 1200, category: "Marketing" },
-    { prompt: "Analyze this data and provide insights...", count: 23, tokensSaved: 1150, category: "Analytics" },
-    { prompt: "Write unit tests for this function...", count: 22, tokensSaved: 1100, category: "Testing" },
-    { prompt: "Generate a README file for...", count: 21, tokensSaved: 1050, category: "Documentation" },
-    { prompt: "Create a presentation outline for...", count: 20, tokensSaved: 1000, category: "Content" },
-    { prompt: "Debug this JavaScript error...", count: 19, tokensSaved: 950, category: "Development" },
-    { prompt: "Write a press release about...", count: 18, tokensSaved: 900, category: "Communication" },
-    { prompt: "Generate a CSS stylesheet for...", count: 17, tokensSaved: 850, category: "Development" },
-    { prompt: "Create a user story for...", count: 16, tokensSaved: 800, category: "Project Management" },
-    { prompt: "Write a technical specification for...", count: 15, tokensSaved: 750, category: "Documentation" },
-    { prompt: "Generate SEO keywords for...", count: 14, tokensSaved: 700, category: "Marketing" },
-    { prompt: "Create a database schema for...", count: 13, tokensSaved: 650, category: "Development" },
-    { prompt: "Write acceptance criteria for...", count: 12, tokensSaved: 600, category: "Project Management" },
-    { prompt: "Generate a sitemap for...", count: 11, tokensSaved: 550, category: "Development" },
-    { prompt: "Create an FAQ section for...", count: 10, tokensSaved: 500, category: "Support" },
-    { prompt: "Write a business proposal for...", count: 9, tokensSaved: 450, category: "Business" },
-    { prompt: "Generate mock data for testing...", count: 8, tokensSaved: 400, category: "Testing" },
-    { prompt: "Create a style guide for...", count: 7, tokensSaved: 350, category: "Design" },
-    { prompt: "Write a case study about...", count: 6, tokensSaved: 300, category: "Content" },
-    { prompt: "Generate a changelog for...", count: 5, tokensSaved: 250, category: "Documentation" },
-    { prompt: "Create a landing page copy for...", count: 4, tokensSaved: 200, category: "Marketing" },
-    { prompt: "Write an onboarding guide for...", count: 3, tokensSaved: 150, category: "Documentation" },
-    { prompt: "Generate a migration script for...", count: 2, tokensSaved: 100, category: "Development" },
-    { prompt: "Create a data model for...", count: 1, tokensSaved: 50, category: "Development" }
-  ];
+        if (historyResponse && historyResponse.ok) {
+          const historyData = await historyResponse.json();
+          setPromptHistory(historyData.prompts || []);
+        } else {
+          setPromptHistory([]);
+        }
+        setDataLoaded(true);
+      } catch {
+        setError('Failed to load dashboard data');
+        setAnalyticsData({ total_prompts: 0, total_tokens_saved: 0, total_cost_saved_usd: 0, avg_compression_rate: 0, prompts_this_month: 0 });
+        setPromptHistory([]);
+        setDataLoaded(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [user?.id]);
 
-  const commonPrompts = [
-    { text: "Write a", count: 156, avgTokens: 45 },
-    { text: "Generate", count: 134, avgTokens: 38 },
-    { text: "Create a", count: 98, avgTokens: 52 },
-    { text: "Explain", count: 87, avgTokens: 41 },
-    { text: "Summarize", count: 76, avgTokens: 29 }
-  ];
+  // Fetch real data from API - only fetch once on mount if data not loaded
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!user?.id || dataLoaded) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const analyticsUrl = `http://localhost:8000/analytics/usage/${user.id}`;
+        const historyUrl = `http://localhost:8000/prompts/history/${user.id}`;
+        
+        const timeout = (ms: number) => new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout')), ms)
+        );
+        
+        const analyticsPromise = Promise.race([fetch(analyticsUrl), timeout(5000)]).catch(() => null) as Promise<Response | null>;
+        const historyPromise = Promise.race([fetch(historyUrl), timeout(5000)]).catch(() => null) as Promise<Response | null>;
+        
+        const [analyticsResponse, historyResponse] = await Promise.all([analyticsPromise, historyPromise]);
 
-  const tokenComparison = {
-    withoutPrompTrim: 234567,
-    withPrompTrim: 156789,
-    savings: 77778,
-    savingsPercentage: 33.2
-  };
+        if (analyticsResponse && analyticsResponse.ok) {
+          const analytics = await (analyticsResponse as any).json();
+          setAnalyticsData(analytics);
+        } else {
+          setAnalyticsData({
+            total_prompts: 0,
+            total_tokens_saved: 0,
+            total_cost_saved_usd: 0,
+            avg_compression_rate: 0,
+            prompts_this_month: 0
+          });
+        }
+
+        if (historyResponse && historyResponse.ok) {
+          const historyData = await (historyResponse as any).json();
+          setPromptHistory(historyData.prompts || []);
+        } else {
+          setPromptHistory([]);
+        }
+        
+        setDataLoaded(true);
+      } catch {
+        setError('Failed to load dashboard data');
+        // Set default data instead of showing error
+        setAnalyticsData({
+          total_prompts: 0,
+          total_tokens_saved: 0,
+          total_cost_saved_usd: 0,
+          avg_compression_rate: 0,
+          prompts_this_month: 0
+        });
+        setPromptHistory([]);
+        setDataLoaded(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [user?.id, dataLoaded]);
+
+  // Calculate metrics from real data - memoized
+  const metrics = useMemo(() => analyticsData ? {
+    promptsRecommended: analyticsData.total_prompts,
+    promptsOptimized: analyticsData.total_prompts,
+    tokensSaved: analyticsData.total_tokens_saved,
+    moneySaved: analyticsData.total_cost_saved_usd,
+    optimizationRate: Math.round(analyticsData.avg_compression_rate * 100),
+    avgTokenReduction: Math.round(analyticsData.avg_compression_rate * 100)
+  } : {
+    promptsRecommended: 0,
+    promptsOptimized: 0,
+    tokensSaved: 0,
+    moneySaved: 0,
+    optimizationRate: 0,
+    avgTokenReduction: 0
+  }, [analyticsData]);
+
+  // Process prompt history into most used prompts format - memoized
+  const mostUsedPrompts: PromptUsage[] = useMemo(() => promptHistory
+    .map(p => ({
+      prompt: p.original_prompt.length > 50 ? p.original_prompt.substring(0, 50) + "..." : p.original_prompt,
+      count: 1, // Each prompt appears once in history
+      tokensSaved: p.tokens_saved,
+      category: "General" // Default category, could be enhanced later
+    }))
+    .slice(0, 20), [promptHistory]); // Show top 20
+
+  // Calculate token comparison from real data - memoized
+  const tokenComparison = useMemo(() => {
+    if (!promptHistory.length) {
+      return {
+        withoutPrompTrim: 0,
+        withPrompTrim: 0,
+        savings: 0,
+        savingsPercentage: 0
+      };
+    }
+
+    const totalOriginalTokens = promptHistory.reduce((sum, p) => sum + p.original_token_count, 0);
+    const totalOptimizedTokens = promptHistory.reduce((sum, p) => sum + p.optimized_token_count, 0);
+    const totalSaved = promptHistory.reduce((sum, p) => sum + p.tokens_saved, 0);
+    const savingsPercentage = totalOriginalTokens > 0 
+      ? Math.round((totalSaved / totalOriginalTokens) * 100 * 100) / 100 
+      : 0;
+
+    return {
+      withoutPrompTrim: totalOriginalTokens,
+      withPrompTrim: totalOptimizedTokens,
+      savings: totalSaved,
+      savingsPercentage
+    };
+  }, [promptHistory]);
+
+  // Calculate prompt analytics metrics - memoized
+  const promptAnalytics = useMemo(() => {
+    if (!promptHistory.length) {
+      return {
+        successRate: 0,
+        avgCompressionRate: 0,
+        dailyAverage: 0,
+        peakHours: "N/A",
+        optimizationLevels: {
+          aggressive: 0,
+          moderate: 0,
+          minimal: 0
+        },
+        complexityDistribution: {
+          simple: 0,
+          medium: 0,
+          complex: 0
+        }
+      };
+    }
+
+    // Calculate success rate (prompts with optimized_text)
+    const successfulPrompts = promptHistory.filter(p => p.optimized_prompt && p.optimized_prompt.trim() !== '');
+    const successRate = (successfulPrompts.length / promptHistory.length) * 100;
+
+    // Calculate average compression rate
+    const avgCompressionRate = analyticsData?.avg_compression_rate || 0;
+
+    // Calculate daily average
+    const totalDays = new Set(promptHistory.map(p => p.created_at.split('T')[0])).size || 1;
+    const dailyAverage = Math.round(promptHistory.length / totalDays);
+
+    // Group by hour to find peak usage
+    const hourGroups: { [key: number]: number } = {};
+    promptHistory.forEach(p => {
+      const date = new Date(p.created_at);
+      const hour = date.getHours();
+      hourGroups[hour] = (hourGroups[hour] || 0) + 1;
+    });
+    const peakHour = Object.entries(hourGroups).sort((a, b) => b[1] - a[1])[0];
+    const peakHours = peakHour ? `${peakHour[0]}:00-${(parseInt(peakHour[0]) + 2) % 24}:00` : "N/A";
+
+    // Count optimization levels
+    const optimizationLevels = promptHistory.reduce((acc, p) => {
+      const level = p.optimization_level || 'moderate';
+      acc[level] = (acc[level] || 0) + 1;
+      return acc;
+    }, {} as { [key: string]: number });
+
+    // Analyze prompt complexity
+    const complexityDistribution = {
+      simple: 0,
+      medium: 0,
+      complex: 0
+    };
+    promptHistory.forEach(p => {
+      const wordCount = p.original_prompt.split(/\s+/).length;
+      if (wordCount <= 50) complexityDistribution.simple++;
+      else if (wordCount <= 150) complexityDistribution.medium++;
+      else complexityDistribution.complex++;
+    });
+
+    // Convert to percentages
+    const total = complexityDistribution.simple + complexityDistribution.medium + complexityDistribution.complex;
+    if (total > 0) {
+      complexityDistribution.simple = Math.round((complexityDistribution.simple / total) * 100);
+      complexityDistribution.medium = Math.round((complexityDistribution.medium / total) * 100);
+      complexityDistribution.complex = Math.round((complexityDistribution.complex / total) * 100);
+    }
+
+    return {
+      successRate: Math.round(successRate * 10) / 10,
+      avgCompressionRate: Math.round(avgCompressionRate * 1000) / 10,
+      dailyAverage,
+      peakHours,
+      optimizationLevels,
+      complexityDistribution
+    };
+  }, [promptHistory, analyticsData]);
 
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'prompts', label: 'Prompt Analytics', icon: Brain },
     { id: 'savings', label: 'Cost Savings', icon: DollarSign },
+    { id: 'api-keys', label: 'API Keys', icon: Key },
     { id: 'export', label: 'Export Data', icon: Download },
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
 
-  // Get unique categories from prompts
-  const categories = ['all', ...Array.from(new Set(mostUsedPrompts.map(p => p.category)))];
+  // Get unique categories from prompts - memoized
+  const categories = useMemo(() => ['all', ...Array.from(new Set(mostUsedPrompts.map(p => p.category)))], [mostUsedPrompts]);
 
-  // Filter and sort prompts
-  const filteredAndSortedPrompts = mostUsedPrompts
+  // Filter and sort prompts - memoized
+  const filteredAndSortedPrompts = useMemo(() => mostUsedPrompts
     .filter(prompt => {
       const matchesSearch = prompt.prompt.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            prompt.category.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === 'all' || prompt.category === selectedCategory;
       return matchesSearch && matchesCategory;
     })
-    .sort((a, b) => sortOrder === 'highest' ? b.count - a.count : a.count - b.count);
+    .sort((a, b) => sortOrder === 'highest' ? b.count - a.count : a.count - b.count), [mostUsedPrompts, searchQuery, selectedCategory, sortOrder]);
 
   return (
     <div className="h-screen bg-gray-50 flex">
+      {/* Loading State */}
+      {loading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 flex items-center space-x-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
+            <span className="text-gray-700">Loading dashboard data...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md">
+            <div className="flex items-center space-x-3 mb-4">
+              <AlertCircle className="h-6 w-6 text-red-500" />
+              <h3 className="text-lg font-semibold text-gray-900">Error Loading Dashboard</h3>
+            </div>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={retryFetch}
+              className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
       {/* Sidebar */}
       <div className="w-64 bg-white shadow-lg flex flex-col">
         {/* Header with Logo */}
@@ -204,7 +417,17 @@ const Dashboard: React.FC = () => {
             {sidebarItems.map((item) => (
               <li key={item.id}>
                 <button
-                  onClick={() => setActiveTab(item.id)}
+                      onClick={() => {
+                    if (item.id === 'api-keys') {
+                      navigateTo('api-keys');
+                    } else {
+                      setActiveTab(item.id);
+                      // Auto-select first subpage when changing tabs
+                      setSearchQuery('');
+                      setSelectedCategory('all');
+                      setSortOrder('highest');
+                    }
+                  }}
                   className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
                     activeTab === item.id
                       ? 'bg-orange-100 text-orange-700'
@@ -325,7 +548,7 @@ const Dashboard: React.FC = () => {
                 <MetricCard
                   title="Money Saved"
                   value={`$${metrics.moneySaved.toFixed(2)}`}
-                  change={22.1}
+                  change={0}
                   changeType="increase"
                   icon={<DollarSign className="h-6 w-6 text-orange-600" />}
                   subtitle="This month"
@@ -333,7 +556,7 @@ const Dashboard: React.FC = () => {
                 <MetricCard
                   title="Tokens Saved"
                   value={metrics.tokensSaved.toLocaleString()}
-                  change={15.7}
+                  change={0}
                   changeType="increase"
                   icon={<Brain className="h-6 w-6 text-orange-600" />}
                   subtitle={`${metrics.avgTokenReduction}% avg reduction`}
@@ -341,7 +564,7 @@ const Dashboard: React.FC = () => {
                 <MetricCard
                   title="Prompts Recommended"
                   value={metrics.promptsRecommended.toLocaleString()}
-                  change={12.5}
+                  change={0}
                   changeType="increase"
                   icon={<Target className="h-6 w-6 text-orange-600" />}
                   subtitle="Total AI suggestions"
@@ -349,7 +572,7 @@ const Dashboard: React.FC = () => {
                 <MetricCard
                   title="Prompts Optimized"
                   value={metrics.promptsOptimized.toLocaleString()}
-                  change={8.3}
+                  change={0}
                   changeType="increase"
                   icon={<Zap className="h-6 w-6 text-orange-600" />}
                   subtitle={`${metrics.optimizationRate}% adoption rate`}
@@ -599,52 +822,42 @@ const Dashboard: React.FC = () => {
             </div>
           )}
 
+
           {activeTab === 'prompts' && (
             <div className="h-full overflow-y-auto space-y-4 p-1 scrollbar-custom">
               {/* Performance Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm text-gray-500">Success Rate</p>
                     <CheckCircle className="h-5 w-5 text-orange-500" />
                   </div>
-                  <p className="text-3xl font-bold text-gray-900">94.2%</p>
+                  <p className="text-3xl font-bold text-gray-900">{promptAnalytics.successRate}%</p>
                   <div className="flex items-center text-sm text-orange-500 mt-1">
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                    2.1% vs last month
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    {promptHistory.length} prompts processed
                   </div>
                 </div>
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-gray-500">Avg Response Time</p>
-                    <Clock className="h-5 w-5 text-orange-500" />
+                    <p className="text-sm text-gray-500">Avg Compression Rate</p>
+                    <Brain className="h-5 w-5 text-orange-500" />
                   </div>
-                  <p className="text-3xl font-bold text-gray-900">1.2s</p>
+                  <p className="text-3xl font-bold text-gray-900">{promptAnalytics.avgCompressionRate}%</p>
                   <div className="flex items-center text-sm text-orange-500 mt-1">
                     <ArrowUpRight className="h-4 w-4 mr-1" />
-                    15% faster
+                    Token reduction efficiency
                   </div>
                 </div>
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-gray-500">User Satisfaction</p>
-                    <Star className="h-5 w-5 text-orange-500" />
+                    <p className="text-sm text-gray-500">Daily Average</p>
+                    <Activity className="h-5 w-5 text-orange-500" />
                   </div>
-                  <p className="text-3xl font-bold text-gray-900">4.8/5</p>
+                  <p className="text-3xl font-bold text-gray-900">{promptAnalytics.dailyAverage}</p>
                   <div className="flex items-center text-sm text-orange-500 mt-1">
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                    0.3 improvement
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-gray-500">Error Rate</p>
-                    <AlertCircle className="h-5 w-5 text-gray-600" />
-                  </div>
-                  <p className="text-3xl font-bold text-gray-900">2.1%</p>
-                  <div className="flex items-center text-sm text-orange-500 mt-1">
-                    <ArrowUpRight className="h-4 w-4 mr-1" />
-                    0.8% reduction
+                    <Clock className="h-4 w-4 mr-1" />
+                    Prompts per day
                   </div>
                 </div>
               </div>
@@ -655,168 +868,79 @@ const Dashboard: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
                     <h4 className="font-medium text-gray-900 mb-1 text-sm">Peak Usage Hours</h4>
-                    <p className="text-xl font-bold text-orange-600">9-11 AM</p>
+                    <p className="text-xl font-bold text-orange-600">{promptAnalytics.peakHours}</p>
                     <p className="text-xs text-gray-600 mt-1">Most active time</p>
                   </div>
                   <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <h4 className="font-medium text-gray-900 mb-1 text-sm">Daily Average</h4>
-                    <p className="text-xl font-bold text-gray-800">2,847</p>
-                    <p className="text-xs text-gray-600 mt-1">prompts per day</p>
+                    <h4 className="font-medium text-gray-900 mb-1 text-sm">Total Prompts</h4>
+                    <p className="text-xl font-bold text-gray-800">{promptHistory.length}</p>
+                    <p className="text-xs text-gray-600 mt-1">optimized</p>
                   </div>
                   <div className="p-3 bg-orange-100 rounded-lg border border-orange-300">
-                    <h4 className="font-medium text-gray-900 mb-1 text-sm">Weekly Growth</h4>
-                    <p className="text-xl font-bold text-orange-600">+18%</p>
-                    <p className="text-xs text-gray-600 mt-1">vs last week</p>
+                    <h4 className="font-medium text-gray-900 mb-1 text-sm">Compression Rate</h4>
+                    <p className="text-xl font-bold text-orange-600">{promptAnalytics.avgCompressionRate}%</p>
+                    <p className="text-xs text-gray-600 mt-1">avg reduction</p>
                   </div>
                 </div>
                 <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2 text-sm">Usage Trends</h4>
+                  <h4 className="font-medium text-gray-900 mb-2 text-sm">Usage Summary</h4>
                   <p className="text-xs text-gray-600">
-                    Your usage patterns show consistent growth with peak activity during business hours. 
-                    The most common prompt types are content generation and data analysis, with an average 
-                    optimization rate of 34% across all categories.
+                    You've optimized {promptHistory.length} prompts with an average compression rate of {promptAnalytics.avgCompressionRate}%.
+                    {promptHistory.length > 0 && ` Peak usage occurs between ${promptAnalytics.peakHours}.`}
                   </p>
                 </div>
               </div>
 
-              {/* Geographic & Device Analytics */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Geographic Distribution</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-orange-500" />
-                        <span className="text-sm text-gray-600">North America</span>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">42%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-gray-800" />
-                        <span className="text-sm text-gray-600">Europe</span>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">28%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-orange-600" />
-                        <span className="text-sm text-gray-600">Asia Pacific</span>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">18%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-gray-700" />
-                        <span className="text-sm text-gray-600">Other</span>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">12%</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Device & Browser Analytics</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Monitor className="h-4 w-4 text-orange-500" />
-                        <span className="text-sm text-gray-600">Desktop</span>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">68%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Smartphone className="h-4 w-4 text-gray-800" />
-                        <span className="text-sm text-gray-600">Mobile</span>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">24%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Monitor className="h-4 w-4 text-orange-600" />
-                        <span className="text-sm text-gray-600">Tablet</span>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">8%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
               {/* AI Model Performance */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Token Reduction Efficiency</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Optimization Levels</h3>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Simple Prompts</span>
+                      <span className="text-sm text-gray-600">Aggressive</span>
                       <div className="flex items-center gap-2">
                         <div className="w-32 bg-gray-200 rounded-full h-2">
-                          <div className="bg-orange-500 h-2 rounded-full" style={{ width: '85%' }}></div>
+                          <div className="bg-orange-600 h-2 rounded-full" style={{ width: `${promptHistory.length > 0 ? (promptAnalytics.optimizationLevels.aggressive || 0) / promptHistory.length * 100 : 0}%` }}></div>
                         </div>
-                        <span className="text-sm font-medium">85%</span>
+                        <span className="text-sm font-medium">{promptAnalytics.optimizationLevels.aggressive || 0}</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Complex Prompts</span>
+                      <span className="text-sm text-gray-600">Moderate</span>
                       <div className="flex items-center gap-2">
                         <div className="w-32 bg-gray-200 rounded-full h-2">
-                          <div className="bg-orange-400 h-2 rounded-full" style={{ width: '72%' }}></div>
+                          <div className="bg-orange-500 h-2 rounded-full" style={{ width: `${promptHistory.length > 0 ? (promptAnalytics.optimizationLevels.moderate || 0) / promptHistory.length * 100 : 0}%` }}></div>
                         </div>
-                        <span className="text-sm font-medium">72%</span>
+                        <span className="text-sm font-medium">{promptAnalytics.optimizationLevels.moderate || 0}</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Technical Prompts</span>
+                      <span className="text-sm text-gray-600">Minimal</span>
                       <div className="flex items-center gap-2">
                         <div className="w-32 bg-gray-200 rounded-full h-2">
-                          <div className="bg-orange-600 h-2 rounded-full" style={{ width: '68%' }}></div>
+                          <div className="bg-orange-400 h-2 rounded-full" style={{ width: `${promptHistory.length > 0 ? (promptAnalytics.optimizationLevels.minimal || 0) / promptHistory.length * 100 : 0}%` }}></div>
                         </div>
-                        <span className="text-sm font-medium">68%</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Creative Prompts</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-32 bg-gray-200 rounded-full h-2">
-                          <div className="bg-gray-800 h-2 rounded-full" style={{ width: '78%' }}></div>
-                        </div>
-                        <span className="text-sm font-medium">78%</span>
+                        <span className="text-sm font-medium">{promptAnalytics.optimizationLevels.minimal || 0}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Model Accuracy by Category</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                        <span className="text-sm font-medium">Development</span>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">96.2%</span>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Compression Summary</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between p-2 bg-orange-50 rounded">
+                      <span className="text-sm font-medium text-gray-900">Total Tokens Saved</span>
+                      <span className="text-sm font-bold text-orange-600">{analyticsData?.total_tokens_saved || 0}</span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-gray-800 rounded-full"></div>
-                        <span className="text-sm font-medium">Marketing</span>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">94.8%</span>
+                    <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <span className="text-sm font-medium text-gray-900">Total Cost Saved</span>
+                      <span className="text-sm font-bold text-gray-900">${(analyticsData?.total_cost_saved_usd || 0).toFixed(2)}</span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-orange-100 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
-                        <span className="text-sm font-medium">Content</span>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">93.1%</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-gray-700 rounded-full"></div>
-                        <span className="text-sm font-medium">Education</span>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">91.7%</span>
+                    <div className="flex items-center justify-between p-2 bg-orange-50 rounded">
+                      <span className="text-sm font-medium text-gray-900">Avg Compression</span>
+                      <span className="text-sm font-bold text-orange-600">{promptAnalytics.avgCompressionRate}%</span>
                     </div>
                   </div>
                 </div>
@@ -831,62 +955,55 @@ const Dashboard: React.FC = () => {
                       <span className="text-sm text-gray-600">Simple (1-50 words)</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 bg-gray-200 rounded-full h-2">
-                          <div className="bg-orange-500 h-2 rounded-full" style={{ width: '45%' }}></div>
+                          <div className="bg-orange-500 h-2 rounded-full" style={{ width: `${promptAnalytics.complexityDistribution.simple}%` }}></div>
                         </div>
-                        <span className="text-sm font-medium">45%</span>
+                        <span className="text-sm font-medium">{promptAnalytics.complexityDistribution.simple}%</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Medium (51-150 words)</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 bg-gray-200 rounded-full h-2">
-                          <div className="bg-orange-400 h-2 rounded-full" style={{ width: '35%' }}></div>
+                          <div className="bg-orange-400 h-2 rounded-full" style={{ width: `${promptAnalytics.complexityDistribution.medium}%` }}></div>
                         </div>
-                        <span className="text-sm font-medium">35%</span>
+                        <span className="text-sm font-medium">{promptAnalytics.complexityDistribution.medium}%</span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">Complex (150+ words)</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 bg-gray-200 rounded-full h-2">
-                          <div className="bg-gray-800 h-2 rounded-full" style={{ width: '20%' }}></div>
+                          <div className="bg-gray-800 h-2 rounded-full" style={{ width: `${promptAnalytics.complexityDistribution.complex}%` }}></div>
                         </div>
-                        <span className="text-sm font-medium">20%</span>
+                        <span className="text-sm font-medium">{promptAnalytics.complexityDistribution.complex}%</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Feature Adoption</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Token Savings by Category</h3>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                       <div className="flex items-center gap-2">
                         <Zap className="h-4 w-4 text-orange-500" />
-                        <span className="text-sm font-medium">Auto-Optimization</span>
+                        <span className="text-sm font-medium">Total Saved</span>
                       </div>
-                      <span className="text-sm font-bold text-gray-900">89%</span>
+                      <span className="text-sm font-bold text-gray-900">{analyticsData?.total_tokens_saved.toLocaleString() || 0}</span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-2">
                         <Brain className="h-4 w-4 text-orange-500" />
-                        <span className="text-sm font-medium">Smart Suggestions</span>
+                        <span className="text-sm font-medium">Avg Savings</span>
                       </div>
-                      <span className="text-sm font-bold text-gray-900">76%</span>
+                      <span className="text-sm font-bold text-gray-900">{Math.round((analyticsData?.total_tokens_saved || 0) / Math.max(promptHistory.length, 1))}</span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-orange-100 rounded-lg">
                       <div className="flex items-center gap-2">
                         <Target className="h-4 w-4 text-orange-600" />
-                        <span className="text-sm font-medium">Custom Templates</span>
+                        <span className="text-sm font-medium">Success Rate</span>
                       </div>
-                      <span className="text-sm font-bold text-gray-900">64%</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Activity className="h-4 w-4 text-gray-700" />
-                        <span className="text-sm font-medium">A/B Testing</span>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900">42%</span>
+                      <span className="text-sm font-bold text-gray-900">{promptAnalytics.successRate}%</span>
                     </div>
                   </div>
                 </div>

@@ -1,0 +1,381 @@
+==========================================
+PROMPTTRIM API DOCUMENTATION
+==========================================
+
+Welcome to PromptTrim - An AI-powered prompt optimization platform that helps you reduce token costs by intelligently compressing your prompts while maintaining their meaning and effectiveness.
+
+==========================================
+TABLE OF CONTENTS
+==========================================
+
+1. GETTING STARTED
+   1.1 Overview
+   1.2 Quick Start Guide
+
+2. API REFERENCE
+   2.1 API Endpoints
+   2.2 Authentication
+   2.3 Request/Response Formats
+
+3. OPTIMIZATION LEVELS
+   3.1 Understanding Levels
+   3.2 Choosing the Right Level
+
+4. BEST PRACTICES
+   4.1 Usage Guidelines
+   4.2 Security Recommendations
+
+5. ANALYTICS & MONITORING
+   5.1 Understanding Your Dashboard
+   5.2 Tracking Usage and Savings
+
+==========================================
+1. GETTING STARTED
+==========================================
+
+1.1 OVERVIEW
+-----------
+
+PromptTrim is an AI-powered prompt optimization platform that helps you reduce token costs by intelligently compressing your prompts while maintaining their meaning and effectiveness.
+
+KEY BENEFITS:
+- Save up to 40% on token costs
+- Maintain prompt quality while reducing length
+- Real-time optimization with instant results
+- Track your savings with detailed analytics
+
+HOW IT WORKS:
+
+Step 1: Create Your API Key
+- Generate a secure API key from your dashboard
+
+Step 2: Send Your Prompt
+- Submit your original prompt to our optimization API
+
+Step 3: Get Optimized Prompt
+- Receive a compressed version with reduced token count
+
+Step 4: Track Savings
+- Monitor your token savings and cost reduction
+
+
+1.2 QUICK START GUIDE
+--------------------
+
+5-MINUTE SETUP
+Get up and running with PromptTrim in just 5 minutes.
+
+STEP 1: SIGN UP
+- Create your free account on PromptTrim
+- You'll get started with:
+  * Free tier with 10,000 tokens/month
+  * Access to all optimization features
+  * Real-time analytics dashboard
+
+STEP 2: GENERATE API KEY
+1. Click on "API Keys" in the dashboard sidebar
+2. Enter a descriptive name for your key
+3. Select "Input" as the key type
+4. Click "Create API Key"
+5. **Copy and save** your API key immediately
+
+⚠️ IMPORTANT: Your full API key will only be shown once. Make sure to save it securely.
+
+STEP 3: MAKE YOUR FIRST API CALL
+
+Test your API key with a simple cURL request:
+
+```bash
+curl -X POST http://localhost:8000/optimize/YOUR_USER_ID \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Write a detailed essay about artificial intelligence and its impact on society",
+    "optimization_level": "moderate"
+  }'
+```
+
+==========================================
+2. API REFERENCE
+==========================================
+
+2.1 API ENDPOINTS
+----------------
+
+POST /optimize/{user_id}
+Optimize a prompt to reduce token count
+
+Request Body:
+{
+  "prompt": "Your original prompt text",
+  "optimization_level": "moderate",
+  "language": "en"
+}
+
+Response:
+{
+  "id": "prompt-id",
+  "original_text": "Original prompt",
+  "optimized_text": "Compressed prompt",
+  "original_token_count": 156,
+  "optimized_token_count": 98,
+  "tokens_saved": 58,
+  "optimization_level": "moderate",
+  "cost_saved_usd": 0.00174
+}
+
+GET /prompts/history/{user_id}
+Retrieve your optimization history
+
+Query Parameters:
+- limit: Number of results (default: 50)
+
+GET /analytics/usage/{user_id}
+Get usage analytics and statistics
+
+Response:
+{
+  "total_prompts": 142,
+  "total_tokens_saved": 8547,
+  "total_cost_saved_usd": 0.256,
+  "avg_compression_rate": 0.34,
+  "prompts_this_month": 28
+}
+
+
+2.2 AUTHENTICATION
+------------------
+
+Note: Currently, authentication is managed through user_id in the URL. Future versions will implement API key authentication headers.
+
+Finding Your User ID
+- Your user ID is available in your dashboard
+- You can find it in your profile settings or in the API key management section
+
+Using Your User ID
+Include your user ID in the API endpoint URL:
+
+http://localhost:8000/optimize/{YOUR_USER_ID}
+
+
+2.3 REQUEST/RESPONSE FORMATS
+----------------------------
+
+Request Format:
+{
+  "prompt": string (required) - Your original prompt text
+  "optimization_level": string (optional) - "minimal", "moderate", or "aggressive" (default: "moderate")
+  "language": string (optional) - Language code (default: "en")
+}
+
+Response Format:
+{
+  "id": string - Unique prompt ID
+  "original_text": string - Original prompt
+  "optimized_text": string - Optimized prompt
+  "original_token_count": number - Original token count
+  "optimized_token_count": number - Optimized token count
+  "tokens_saved": number - Tokens saved
+  "optimization_level": string - Level used
+  "cost_saved_usd": number - Cost saved in USD
+  "created_at": string - ISO timestamp
+}
+
+==========================================
+3. OPTIMIZATION LEVELS
+==========================================
+
+3.1 UNDERSTANDING LEVELS
+------------------------
+
+PromptTrim offers three optimization levels to balance between token reduction and content quality:
+
+MINIMAL (20-30% reduction)
+Best for: Preserving maximum context and detail
+- Gentle compression maintaining most original content
+- Ideal for complex technical prompts
+- Minimal impact on meaning and context
+- Usage: "optimization_level": "minimal"
+
+MODERATE (40-60% reduction) - RECOMMENDED
+Best for: General use cases and content generation
+- Balanced compression with good quality preservation
+- Works well for most prompt types
+- Significant token savings with minimal quality loss
+- Usage: "optimization_level": "moderate"
+
+AGGRESSIVE (60-80% reduction)
+Best for: Simple prompts and maximum cost savings
+- Maximum compression for cost optimization
+- Suitable for straightforward prompts
+- May reduce some contextual nuances
+- Usage: "optimization_level": "aggressive"
+
+
+3.2 CHOOSING THE RIGHT LEVEL
+-----------------------------
+
+Start with MODERATE for most use cases. If you need maximum detail retention, use MINIMAL. For simple prompts where cost is the priority, use AGGRESSIVE.
+
+==========================================
+4. BEST PRACTICES
+==========================================
+
+4.1 USAGE GUIDELINES
+--------------------
+
+WHEN TO USE PROMPTTRIM:
+- When processing large volumes of prompts in batch operations
+- For reducing costs in production applications
+- When prompts contain redundant or verbose language
+- For creating shorter prompts for token-limited contexts
+- When optimizing for specific model token limits
+
+PROMPT QUALITY TIPS:
+✓ Write clear, specific prompts
+  The more structured your original prompt, the better the optimization
+
+✓ Remove unnecessary filler words
+  Words like "very", "really", "actually" add tokens without value
+
+✓ Use specific examples over descriptions
+  Concrete examples convey more information efficiently
+
+✓ Test different optimization levels
+  Find the level that works best for your specific use case
+
+WHAT NOT TO OPTIMIZE:
+- Prompts requiring exact verbatim output
+- Code snippets or structured data
+- Prompts where every word is critical
+- Highly creative writing where nuance matters most
+
+
+4.2 SECURITY RECOMMENDATIONS
+----------------------------
+
+⚠️ IMPORTANT SECURITY PRACTICES:
+- Never commit API keys to version control
+- Store keys in environment variables
+- Rotate keys regularly for security
+- Monitor usage for unexpected activity
+- Revoke compromised keys immediately
+
+ENVIRONMENT VARIABLES EXAMPLE:
+```bash
+# .env file
+PROMPTTRIM_API_KEY=pt_your_key_here
+PROMPTTRIM_USER_ID=your_user_id_here
+PROMPTTRIM_BASE_URL=http://localhost:8000
+```
+
+==========================================
+5. ANALYTICS & MONITORING
+==========================================
+
+5.1 UNDERSTANDING YOUR DASHBOARD
+---------------------------------
+
+Your PromptTrim dashboard provides comprehensive insights into your usage, savings, and optimization efficiency.
+
+OVERVIEW TAB:
+- Money Saved: Total cost savings in USD
+- Tokens Saved: Total tokens reduced
+- Prompts Optimized: Number of prompts processed
+- Optimization Rate: Average compression percentage
+
+PROMPT ANALYTICS TAB:
+- Success rate of optimizations
+- Average compression rate
+- Daily usage patterns
+- Peak usage hours
+- Prompt complexity distribution
+
+COST SAVINGS TAB:
+- Token comparison before/after optimization
+- Cost savings breakdown
+- ROI calculations
+- Monthly savings trends
+
+
+5.2 TRACKING USAGE AND SAVINGS
+-------------------------------
+
+MONITORING YOUR USAGE:
+
+1. View Dashboard Analytics
+   - Check total prompts optimized
+   - Review token savings
+   - Monitor cost reductions
+
+2. Track Historical Data
+   - Access prompt history
+   - View optimization results
+   - Analyze usage patterns
+
+3. Export Data
+   - Export analytics reports
+   - Download usage data
+   - Generate savings reports
+
+COST CALCULATION:
+
+The cost savings are calculated based on:
+- Original token count × $0.03 per 1K tokens
+- Optimized token count × $0.03 per 1K tokens
+- Savings = (Original - Optimized) × 0.03 / 1000
+
+EXAMPLE:
+Original tokens: 1,000
+Optimized tokens: 600
+Tokens saved: 400
+Cost saved: 400 × 0.03 / 1000 = $0.012
+
+==========================================
+TROUBLESHOOTING
+==========================================
+
+COMMON ISSUES:
+
+1. "Failed to create API key"
+   - Ensure you're logged in
+   - Check your account has available quota
+   - Try refreshing the page
+
+2. "Authentication failed"
+   - Verify your user ID is correct
+   - Check if your account is active
+   - Ensure you're using the correct endpoint
+
+3. "Prompt optimization failed"
+   - Check your prompt is valid text
+   - Ensure optimization level is one of: minimal, moderate, aggressive
+   - Verify language code is valid (default: "en")
+
+4. "Rate limit exceeded"
+   - Wait before making additional requests
+   - Check your current usage in dashboard
+   - Consider upgrading your plan
+
+==========================================
+SUPPORT
+==========================================
+
+For support and questions:
+- Email: support@prompttrim.com
+- Documentation: https://prompttrim.com/docs
+- GitHub: https://github.com/prompttrim
+
+==========================================
+CHANGELOG
+==========================================
+
+Version 1.0.0 (Current)
+- Initial release
+- Input token reduction optimization
+- Real-time analytics dashboard
+- API key management
+- Three optimization levels
+
+==========================================
+END OF DOCUMENTATION
+==========================================

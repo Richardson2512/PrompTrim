@@ -10,7 +10,7 @@
   <div class="popup-container">
     <header class="popup-header">
       <div class="logo">
-        <h1>🎯 PrompTrim</h1>
+        <h1>PrompTrim</h1>
       </div>
       <div class="version">v1.0.0</div>
     </header>
@@ -32,60 +32,72 @@
         </p>
       </section>
 
-      <!-- Minimum Severity Setting -->
+      <!-- Floating Logo Toggle -->
       <section class="setting-section">
         <div class="setting-header">
-          <h2>Minimum Severity</h2>
+          <h2>Floating Logo</h2>
+          <div class="toggle-wrapper">
+            <label class="switch">
+              <input type="checkbox" id="showFloatingLogoToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
         <p class="setting-description">
-          Show indicator only for prompts at or above this severity level
+          Show or hide the floating PrompTrim logo on chat inputs
         </p>
-        <div class="radio-group">
-          <label class="radio-option">
-            <input type="radio" name="minSeverity" value="green" id="green">
-            <span class="radio-label">
-              <span class="severity-dot severity-green"></span>
-              <span>Green - Show all (default)</span>
-            </span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="minSeverity" value="orange" id="orange">
-            <span class="radio-label">
-              <span class="severity-dot severity-orange"></span>
-              <span>Orange - Show moderate and high</span>
-            </span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="minSeverity" value="red" id="red">
-            <span class="radio-label">
-              <span class="severity-dot severity-red"></span>
-              <span>Red - Show only high verbosity</span>
-            </span>
-          </label>
-        </div>
       </section>
 
-      <!-- Compression Mode -->
+      <!-- Smart Auto-Toggle -->
       <section class="setting-section">
         <div class="setting-header">
-          <h2>Compression Mode</h2>
+          <h2>Smart Auto-Toggle</h2>
+          <div class="toggle-wrapper">
+            <label class="switch">
+              <input type="checkbox" id="autoToggleSwitch" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
         <p class="setting-description">
-          Choose how prompts are compressed
+          Automatically enable on AI chat platforms (ChatGPT, Claude, Gemini, etc.) and disable on other sites
         </p>
-        <div class="radio-group">
-          <label class="radio-option">
-            <input type="radio" name="compressionMode" value="client" id="client" checked>
-            <span class="radio-label">Client-side (Local)</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="compressionMode" value="api" id="api">
-            <span class="radio-label">API (Remote - TinyLlama)</span>
-          </label>
-        </div>
+        <button id="testAutoToggle" class="test-button">Test Auto-Toggle Now</button>
       </section>
 
-      <!-- API Endpoint (for future use) -->
+      <!-- Information about Automatic Severity -->
+      <section class="setting-section">
+        <div class="setting-header">
+          <h2>Severity Indicator</h2>
+        </div>
+        <p class="setting-description">
+          PrompTrim automatically detects the verbosity level of your prompts and shows indicators accordingly. 
+          Green = Optimal, Orange = Moderate, Red = High verbosity.
+        </p>
+      </section>
+
+      <!-- API Key Configuration -->
+      <section class="setting-section">
+        <div class="setting-header">
+          <h2>API Key</h2>
+        </div>
+        <input 
+          type="password" 
+          id="apiKey" 
+          class="text-input" 
+          placeholder="Enter your API key"
+        >
+        <div style="margin-top: 12px;">
+          <a href="#" id="getApiKey" class="link-button">Get API Key</a>
+          <span style="margin: 0 8px;">or</span>
+          <a href="#" id="visitDashboard" class="link-button">Visit Dashboard</a>
+        </div>
+        <p class="setting-description">
+          Your API key is required to use PrompTrim. Get started by creating an account.
+        </p>
+      </section>
+      
+      <!-- API Endpoint -->
       <section class="setting-section">
         <div class="setting-header">
           <h2>API Endpoint</h2>
@@ -94,11 +106,11 @@
           type="text" 
           id="apiEndpoint" 
           class="text-input" 
-          placeholder="https://your-api-endpoint.com/compress"
-          disabled
+          placeholder="http://localhost:8000/api/optimize"
+          value="http://localhost:8000/api/optimize"
         >
         <p class="setting-description">
-          Configure when API mode is selected
+          PrompTrim API endpoint (default: official endpoint)
         </p>
       </section>
 
@@ -128,7 +140,7 @@
           PrompTrim analyzes your prompts and suggests compressed versions to save tokens and reduce costs. 
           It works with ChatGPT, Claude, and other LLM chat interfaces.
         </p>
-        <a href="README.txt" target="_blank" class="link-button">📖 View Documentation</a>
+        <a href="README.txt" target="_blank" class="link-button">View Documentation</a>
       </section>
     </main>
 

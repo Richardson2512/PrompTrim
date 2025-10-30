@@ -1,10 +1,35 @@
-import { Mail, Github, Linkedin, Twitter } from 'lucide-react';
+import { Mail, Github, Linkedin, Twitter, Sparkles } from 'lucide-react';
 import { useRouter } from '../contexts/RouterContext';
-import { useEffect, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useEffect, useRef, useState } from 'react';
+import { ChatAssistant } from './ChatAssistant';
 
 const LandingPage = () => {
-  const { navigateTo } = useRouter();
+  const { navigateTo, setIntendedRoute } = useRouter();
+  const { user, profile } = useAuth();
   const typingTextRef = useRef<HTMLDivElement>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Helper function to handle navigation based on auth state
+  const handleNavigation = (targetRoute: 'dashboard' | 'api-keys' | 'login' = 'dashboard') => {
+    if (user) {
+      // User is already logged in, navigate to their target page
+      console.log('✅ User logged in, navigating to', targetRoute);
+      navigateTo(targetRoute);
+    } else {
+      // User is not logged in, determine where to send them
+      if (targetRoute === 'api-keys') {
+        // For api-keys, set intended route and go to login
+        console.log('🔑 Setting intended route to api-keys and navigating to login');
+        setIntendedRoute('api-keys');
+        navigateTo('login');
+      } else {
+        // For dashboard, just go to login
+        console.log('🔑 Navigating to login');
+        navigateTo('login');
+      }
+    }
+  };
 
   useEffect(() => {
     const typingText = typingTextRef.current;
@@ -14,12 +39,14 @@ const LandingPage = () => {
     
     if (!typingText) return;
 
-    const prompt = 'Write a comprehensive marketing strategy for a new AI-powered productivity tool that helps teams optimize their workflow and reduce costs by 50%';
-    const trimmedPrompt = 'Write a marketing strategy for an AI productivity tool that reduces costs by 50%';
+    const prompt = 'I need you to write a very detailed and comprehensive marketing strategy document for a brand new AI-powered productivity application that is specifically designed to help business teams and organizations optimize their daily workflow processes and significantly reduce their operational costs by approximately 50 percent. Please include market analysis, target audience research, competitive positioning, pricing strategies, distribution channels, promotional campaigns, budget allocation, timeline implementation, success metrics, and detailed action plans for each marketing channel including digital marketing, content marketing, social media marketing, email marketing, influencer partnerships, PR activities, and traditional advertising methods.';
+    const trimmedPrompt = 'Create a comprehensive marketing strategy for an AI productivity tool that reduces costs by 50%. Include market analysis, target audience, competitive positioning, pricing, distribution channels, promotional campaigns, budget allocation, timeline, and success metrics.';
     let i = 0;
     let isActive = true;
+    let isResetting = false;
     let timeouts: NodeJS.Timeout[] = [];
-    let isTrimmed = false;
+    const maxLines = 3;
+    let isVisible = true;
     
     function showSubLogo() {
       if (subLogoContainer) {
@@ -33,26 +60,25 @@ const LandingPage = () => {
     function showPopup() {
       if (trimPopup) {
         trimPopup.style.opacity = '1';
-        trimPopup.style.transform = 'translateY(0)';
+        trimPopup.style.transform = 'translateY(-50%)';
       }
     }
     
     function hidePopup() {
       if (trimPopup) {
         trimPopup.style.opacity = '0';
-        trimPopup.style.transform = 'translateY(10px)';
+        trimPopup.style.transform = 'translateY(-50%)';
       }
     }
     
     function trimPrompt() {
       if (!isActive || !typingText) return;
-      isTrimmed = true;
-      typingText.textContent = '';
+      typingText.innerHTML = '';
       i = 0;
       
       function typeTrimmed() {
         if (!isActive || !typingText || i >= trimmedPrompt.length) return;
-        typingText.textContent += trimmedPrompt.charAt(i);
+        typingText.innerHTML = trimmedPrompt.substring(0, i + 1) + '<span class="cursor">|</span>';
         i++;
         const timer = setTimeout(typeTrimmed, 30);
         timeouts.push(timer);
@@ -65,9 +91,39 @@ const LandingPage = () => {
       if (!isActive || !typingText) return;
       
       if (i < prompt.length) {
-        typingText.textContent += prompt.charAt(i);
+        const currentText = prompt.substring(0, i + 1);
+        
+        // Split text into lines based on character count (roughly 60 chars per line)
+        const words = currentText.split(' ');
+        let lines: string[] = [];
+        let currentLine = '';
+        
+        for (const word of words) {
+          if ((currentLine + word).length > 60 && currentLine.length > 0) {
+            lines.push(currentLine.trim());
+            currentLine = word + ' ';
+          } else {
+            currentLine += word + ' ';
+          }
+        }
+        
+        // Add the current incomplete line
+        if (currentLine.trim()) {
+          lines.push(currentLine.trim());
+        }
+        
+        // Keep only the last 3 lines
+        if (lines.length > maxLines) {
+          lines = lines.slice(-maxLines);
+        }
+        
+        // Update display
+        typingText.innerHTML = lines.map(line => 
+          line === lines[lines.length - 1] ? line + '<span class="cursor">|</span>' : line
+        ).join('<br>');
+        
         i++;
-        const timer = setTimeout(typeWriter, 50);
+        const timer = setTimeout(typeWriter, 35);
         timeouts.push(timer);
       } else {
         // Show sub-logo and popup when typing is complete
@@ -84,7 +140,15 @@ const LandingPage = () => {
         
         // Reset after showing trimmed version with 5-second pause
         const resetTimer = setTimeout(() => {
-          if (!isActive || !typingText) return;
+          if (!isActive || !typingText || isResetting) return;
+          
+          isResetting = true;
+          
+          // Clear all timeouts to prevent conflicts
+          timeouts.forEach(timeout => clearTimeout(timeout));
+          timeouts = [];
+          
+          // Reset UI elements
           hidePopup();
           if (subLogoContainer) {
             subLogoContainer.style.opacity = '0';
@@ -92,10 +156,19 @@ const LandingPage = () => {
           if (subLogoImg) {
             subLogoImg.style.filter = 'none';
           }
-          typingText.textContent = '';
+          
+          // Clear text and reset state
+          typingText.innerHTML = '';
           i = 0;
-          isTrimmed = false;
-          typeWriter();
+          
+          // Small delay before restarting to ensure clean state
+          const restartTimer = setTimeout(() => {
+            if (isActive && typingText) {
+              isResetting = false;
+              typeWriter();
+            }
+          }, 200);
+          timeouts.push(restartTimer);
         }, 10000); // Increased from 5000ms to 10000ms (5 seconds pause after trimmed prompt)
         timeouts.push(resetTimer);
       }
@@ -104,11 +177,30 @@ const LandingPage = () => {
     const initialTimer = setTimeout(typeWriter, 1000);
     timeouts.push(initialTimer);
     
+    // Stop animation when page is not visible
+    const handleVisibilityChange = () => {
+      isVisible = !document.hidden;
+      if (!isVisible) {
+        // Clear all timers when page is hidden
+        timeouts.forEach(timeout => clearTimeout(timeout));
+        timeouts = [];
+      } else if (isActive && !typingText.innerHTML.trim()) {
+        // Restart animation when page becomes visible again
+        i = 0;
+        const timer = setTimeout(typeWriter, 500);
+        timeouts.push(timer);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     return () => {
       isActive = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       timeouts.forEach(timeout => clearTimeout(timeout));
+      timeouts = [];
       if (typingText) {
-        typingText.textContent = '';
+        typingText.innerHTML = '';
       }
     };
   }, []);
@@ -185,81 +277,225 @@ const LandingPage = () => {
           order: 1,
           flexGrow: 0
         }}>
-          {/* Login Button */}
-          <button 
-            onClick={() => navigateTo('login')}
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              width: '80px',
-              height: '40px',
-              border: '2px solid #FF6B35',
-              borderRadius: '8px',
-              background: 'transparent',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              flex: 'none',
-              order: 0,
-              flexGrow: 0,
-              fontFamily: 'JetBrains Mono',
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#000000'
-            }}
-            onMouseEnter={(e) => {
-              const target = e.currentTarget as HTMLButtonElement;
-              target.style.background = '#000000';
-              target.style.color = '#FFFFFF';
-              target.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              const target = e.currentTarget as HTMLButtonElement;
-              target.style.background = 'transparent';
-              target.style.color = '#000000';
-              target.style.transform = 'scale(1)';
-            }}
-          >
-            Login
-          </button>
+          {/* Conditional: Show user info if logged in, otherwise show login/signup */}
+          {user && profile ? (
+            <>
+              {/* User Email */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                height: '40px',
+                padding: '0 12px',
+                fontFamily: 'JetBrains Mono',
+                fontSize: '12px',
+                fontWeight: '400',
+                color: '#1F1F1F',
+                order: 0
+              }}>
+                {profile.email}
+              </div>
 
-          {/* Get Started Button */}
-          <button 
-            onClick={() => navigateTo('signup')}
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              width: '100px',
-              height: '40px',
-              border: '2px solid #FF6B35',
-              borderRadius: '8px',
-              background: '#FF6B35',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              flex: 'none',
-              order: 1,
-              flexGrow: 0,
-              fontFamily: 'JetBrains Mono',
-              fontSize: '14px',
-              fontWeight: '500',
-              color: '#000000'
-            }}
-            onMouseEnter={(e) => {
-              const target = e.currentTarget as HTMLButtonElement;
-              target.style.background = '#000000';
-              target.style.color = '#FFFFFF';
-              target.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              const target = e.currentTarget as HTMLButtonElement;
-              target.style.background = '#FF6B35';
-              target.style.color = '#000000';
-              target.style.transform = 'scale(1)';
-            }}
-          >
-            Get Started
-          </button>
+              {/* Chat Assistant Button */}
+              <button 
+                onClick={() => setIsChatOpen(true)}
+                title="Chat Assistant"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  width: '40px',
+                  height: '40px',
+                  border: '2px solid #FF6B35',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #FF6B35 0%, #000000 100%)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  flex: 'none',
+                  order: 1,
+                  flexGrow: 0,
+                  position: 'relative',
+                  boxShadow: '0 0 20px rgba(255, 107, 53, 0.5)',
+                  animation: 'glow 2s ease-in-out infinite alternate'
+                }}
+                onMouseEnter={(e) => {
+                  const target = e.currentTarget as HTMLButtonElement;
+                  target.style.boxShadow = '0 0 30px rgba(255, 107, 53, 0.8)';
+                  target.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  const target = e.currentTarget as HTMLButtonElement;
+                  target.style.boxShadow = '0 0 20px rgba(255, 107, 53, 0.5)';
+                  target.style.transform = 'scale(1)';
+                }}
+              >
+                <Sparkles 
+                  size={20} 
+                  style={{ 
+                    color: '#FFFFFF',
+                    filter: 'drop-shadow(0 0 4px #FF6B35)'
+                  }} 
+                />
+              </button>
+
+              {/* Dashboard Button */}
+              <button 
+                onClick={() => navigateTo('dashboard')}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  width: '100px',
+                  height: '40px',
+                  border: '2px solid #FF6B35',
+                  borderRadius: '8px',
+                  background: '#FF6B35',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  flex: 'none',
+                  order: 2,
+                  flexGrow: 0,
+                  fontFamily: 'JetBrains Mono',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#000000'
+                }}
+                onMouseEnter={(e) => {
+                  const target = e.currentTarget as HTMLButtonElement;
+                  target.style.background = '#000000';
+                  target.style.color = '#FFFFFF';
+                  target.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  const target = e.currentTarget as HTMLButtonElement;
+                  target.style.background = '#FF6B35';
+                  target.style.color = '#000000';
+                  target.style.transform = 'scale(1)';
+                }}
+              >
+                Dashboard
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Chat Assistant Button */}
+              <button 
+                onClick={() => setIsChatOpen(true)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  width: '40px',
+                  height: '40px',
+                  border: '2px solid #FF6B35',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #FF6B35 0%, #000000 100%)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  flex: 'none',
+                  order: 0,
+                  flexGrow: 0,
+                  position: 'relative',
+                  boxShadow: '0 0 20px rgba(255, 107, 53, 0.5)',
+                  animation: 'glow 2s ease-in-out infinite alternate'
+                }}
+                onMouseEnter={(e) => {
+                  const target = e.currentTarget as HTMLButtonElement;
+                  target.style.boxShadow = '0 0 30px rgba(255, 107, 53, 0.8)';
+                  target.style.transform = 'scale(1.1)';
+                }}
+                onMouseLeave={(e) => {
+                  const target = e.currentTarget as HTMLButtonElement;
+                  target.style.boxShadow = '0 0 20px rgba(255, 107, 53, 0.5)';
+                  target.style.transform = 'scale(1)';
+                }}
+              >
+                <Sparkles 
+                  size={20} 
+                  style={{ 
+                    color: '#FFFFFF',
+                    filter: 'drop-shadow(0 0 4px #FF6B35)'
+                  }} 
+                />
+              </button>
+
+              {/* Login Button */}
+              <button 
+                onClick={() => handleNavigation('dashboard')}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  width: '80px',
+                  height: '40px',
+                  border: '2px solid #FF6B35',
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  flex: 'none',
+                  order: 0,
+                  flexGrow: 0,
+                  fontFamily: 'JetBrains Mono',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#000000'
+                }}
+                onMouseEnter={(e) => {
+                  const target = e.currentTarget as HTMLButtonElement;
+                  target.style.background = '#000000';
+                  target.style.color = '#FFFFFF';
+                  target.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  const target = e.currentTarget as HTMLButtonElement;
+                  target.style.background = 'transparent';
+                  target.style.color = '#000000';
+                  target.style.transform = 'scale(1)';
+                }}
+              >
+                Login
+              </button>
+
+              {/* Get Started Button */}
+              <button 
+                onClick={() => handleNavigation('api-keys')}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  width: '100px',
+                  height: '40px',
+                  border: '2px solid #FF6B35',
+                  borderRadius: '8px',
+                  background: '#FF6B35',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  flex: 'none',
+                  order: 1,
+                  flexGrow: 0,
+                  fontFamily: 'JetBrains Mono',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#000000'
+                }}
+                onMouseEnter={(e) => {
+                  const target = e.currentTarget as HTMLButtonElement;
+                  target.style.background = '#000000';
+                  target.style.color = '#FFFFFF';
+                  target.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  const target = e.currentTarget as HTMLButtonElement;
+                  target.style.background = '#FF6B35';
+                  target.style.color = '#000000';
+                  target.style.transform = 'scale(1)';
+                }}
+              >
+                Get Started
+              </button>
+            </>
+          )}
 
           {/* Menu Button */}
           <button style={{
@@ -344,7 +580,7 @@ const LandingPage = () => {
         width: '768px',
         height: '92px',
         left: 'calc(50% - 768px/2)',
-        top: '288px'
+        top: '268px'
       }}>
         {/* Minimalist Landing Page */}
         <h1 style={{
@@ -392,144 +628,93 @@ const LandingPage = () => {
         width: '413px',
         height: '171.62px',
         left: 'calc(50% - 413px/2 - 230.5px)',
-        top: '440px'
+        top: '420px'
       }}>
         {/* Card */}
         <div style={{
           boxSizing: 'border-box',
           display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-          padding: '18.4615px',
-          gap: '18.46px',
-          width: '413.08px',
-          height: '171.62px',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '20px',
+          gap: '15px',
+          width: '350px',
+          height: '140px',
           background: '#FF6B35',
           border: '1.15385px solid #FF6B35',
           boxShadow: '0px 32.3077px 12.6923px rgba(0, 0, 0, 0.01), 0px 18.4615px 10.3846px rgba(0, 0, 0, 0.05), 0px 8.07692px 8.07692px rgba(0, 0, 0, 0.09), 0px 2.30769px 4.61538px rgba(0, 0, 0, 0.1), 0px 0px 0px rgba(0, 0, 0, 0.1)',
           borderRadius: '9.23077px',
           flex: 'none',
           order: 0,
-          flexGrow: 0,
-          cursor: 'pointer',
-          transition: 'all 0.3s ease'
-        }}
-        onMouseEnter={(e) => {
-          const target = e.currentTarget as HTMLDivElement;
-          target.style.background = '#000000';
-          target.style.transform = 'scale(1.02)';
-        }}
-        onMouseLeave={(e) => {
-          const target = e.currentTarget as HTMLDivElement;
-          target.style.background = '#FF6B35';
-          target.style.transform = 'scale(1)';
-        }}
-        >
-          {/* Photo */}
-          <div style={{
-            width: '60px',
-            height: '60px',
-            background: '#7C7C7C',
-            borderRadius: '6.92308px',
-            flex: 'none',
-            order: 0,
-            flexGrow: 0
-          }}></div>
+          flexGrow: 0
+        }}>
+          {/* Description */}
+          <p style={{
+            fontFamily: 'JetBrains Mono',
+            fontStyle: 'normal',
+            fontWeight: '400',
+            fontSize: '14px',
+            lineHeight: '20px',
+            color: '#FFFFFF',
+            margin: '0',
+            textAlign: 'center',
+            maxWidth: '320px'
+          }}>Experience the power of AI optimization and see how much you can save on your AI costs.</p>
           
-          {/* Desc */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-            padding: '0px',
-            gap: '6.92px',
-            width: '297.69px',
-            height: '134.69px',
-            flex: 'none',
-            order: 1,
-            flexGrow: 1
-          }}>
-            {/* Dribbble.com */}
-            <h3 style={{
-              width: '133px',
-              height: '24px',
+          {/* Get API Button */}
+          <button
+            onClick={() => {
+              console.log('🔍 LandingPage - Get API clicked, user:', !!user);
+              if (user) {
+                // User is already logged in, navigate directly to api-keys
+                console.log('✅ User logged in, navigating to api-keys');
+                navigateTo('api-keys');
+              } else {
+                // User is not logged in, set intended route and go to login
+                console.log('🔑 Setting intended route to api-keys and navigating to login');
+                setIntendedRoute('api-keys');
+                navigateTo('login');
+              }
+            }}
+            style={{
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '8px 20px',
+              gap: '8px',
+              width: '260px',
+              height: '36px',
+              background: 'transparent',
+              border: '1.5px solid #FFFFFF',
+              borderRadius: '25px',
               fontFamily: 'JetBrains Mono',
               fontStyle: 'normal',
               fontWeight: '500',
-              fontSize: '18.4615px',
-              lineHeight: '24px',
+              fontSize: '13px',
+              lineHeight: '20px',
               color: '#FFFFFF',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
               flex: 'none',
               order: 0,
               flexGrow: 0,
-              margin: '0'
-            }}>Dribbble.com</h3>
-            
-            {/* Lorem ipsum dolor sit amet consectetur. Elit eget ate at cursus amet facilisi. */}
-            <p style={{
-              width: '297.69px',
-              height: '63px',
-              fontFamily: 'JetBrains Mono',
-              fontStyle: 'normal',
-              fontWeight: '400',
-              fontSize: '16.1538px',
-              lineHeight: '21px',
-              color: '#FFFFFF',
-              flex: 'none',
-              order: 1,
-              alignSelf: 'stretch',
-              flexGrow: 0,
-              margin: '0'
-            }}>Lorem ipsum dolor sit amet consectetur. Elit eget ate at cursus amet facilisi.</p>
-            
-            {/* Tag */}
-            <div style={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '0px',
-              gap: '9.23px',
-              width: '115.31px',
-              height: '33.85px',
-              flex: 'none',
-              order: 2,
-              flexGrow: 0
-            }}>
-              {/* Label */}
-              <div style={{
-                boxSizing: 'border-box',
-                display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '10px 28px',
-                gap: '11.54px',
-                width: '150px',
-                height: '42px',
-                border: '1.15385px solid #FFFFFF',
-                borderRadius: '57.6923px',
-                flex: 'none',
-                order: 0,
-                flexGrow: 0
-              }}>
-                {/* Inspirations */}
-                <span style={{
-                  width: '100px',
-                  height: '26px',
-                  fontFamily: 'JetBrains Mono',
-                  fontStyle: 'normal',
-                  fontWeight: '400',
-                  fontSize: '16.1538px',
-                  lineHeight: '26px',
-                  color: '#FFFFFF',
-                  flex: 'none',
-                  order: 0,
-                  flexGrow: 0,
-                  textAlign: 'center'
-                }}>Inspirations</span>
-              </div>
-            </div>
-          </div>
+              whiteSpace: 'nowrap'
+            }}
+            onMouseEnter={(e) => {
+              const target = e.currentTarget as HTMLButtonElement;
+              target.style.background = '#FFFFFF';
+              target.style.color = '#FF6B35';
+            }}
+            onMouseLeave={(e) => {
+              const target = e.currentTarget as HTMLButtonElement;
+              target.style.background = 'transparent';
+              target.style.color = '#FFFFFF';
+            }}
+          >
+            Get your API key for free
+          </button>
         </div>
 
         {/* Tag */}
@@ -559,28 +744,42 @@ const LandingPage = () => {
             order: 0,
             flexGrow: 0
           }}>
-            {/* Label */}
-            <div style={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '7.2px 16.8px',
-              gap: '12px',
-              width: '154.6px',
-              height: '36.4px',
-              background: '#1F1F1F',
-              border: '1.2px solid #7C7C7C',
-              boxShadow: '0px 33.6px 13.2px rgba(0, 0, 0, 0.01), 0px 19.2px 10.8px rgba(0, 0, 0, 0.05), 0px 8.4px 8.4px rgba(0, 0, 0, 0.09), 0px 2.4px 4.8px rgba(0, 0, 0, 0.1), 0px 0px 0px rgba(0, 0, 0, 0.1)',
-              borderRadius: '60px',
-              flex: 'none',
-              order: 0,
-              flexGrow: 0
-            }}>
-              {/* Inspirations */}
+            {/* Watch Demo Button */}
+            <button
+              onClick={() => handleNavigation('dashboard')}
+              style={{
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '7.2px 16.8px',
+                gap: '12px',
+                width: '154.6px',
+                height: '36.4px',
+                background: '#1F1F1F',
+                border: '1.2px solid #7C7C7C',
+                borderRadius: '60px',
+                flex: 'none',
+                order: 0,
+                flexGrow: 0,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = '#FF6B35';
+                target.style.border = '1.2px solid #FF6B35';
+                target.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = '#1F1F1F';
+                target.style.border = '1.2px solid #7C7C7C';
+                target.style.transform = 'scale(1)';
+              }}
+            >
               <span style={{
-                width: '121px',
-                height: '22px',
                 fontFamily: 'JetBrains Mono',
                 fontStyle: 'normal',
                 fontWeight: '400',
@@ -590,29 +789,45 @@ const LandingPage = () => {
                 flex: 'none',
                 order: 0,
                 flexGrow: 0
-              }}>Inspirations</span>
-            </div>
+              }}>Watch Demo</span>
+            </button>
             
-            {/* Label */}
-            <div style={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '7.2px 16.8px',
-              gap: '12px',
-              width: '84.6px',
-              height: '36.4px',
-              border: '1.2px solid #7C7C7C',
-              borderRadius: '60px',
-              flex: 'none',
-              order: 1,
-              flexGrow: 0
-            }}>
-              {/* Icons */}
+            {/* Mockup Button */}
+            <button
+              onClick={() => handleNavigation('dashboard')}
+              style={{
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '7.2px 16.8px',
+                gap: '12px',
+                width: '94.6px',
+                height: '36.4px',
+                background: 'transparent',
+                border: '1.2px solid #7C7C7C',
+                borderRadius: '60px',
+                flex: 'none',
+                order: 1,
+                flexGrow: 0,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = '#FF6B35';
+                target.style.border = '1.2px solid #FF6B35';
+                target.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = 'transparent';
+                target.style.border = '1.2px solid #7C7C7C';
+                target.style.transform = 'scale(1)';
+              }}
+            >
               <span style={{
-                width: '51px',
-                height: '22px',
                 fontFamily: 'JetBrains Mono',
                 fontStyle: 'normal',
                 fontWeight: '400',
@@ -622,29 +837,45 @@ const LandingPage = () => {
                 flex: 'none',
                 order: 0,
                 flexGrow: 0
-              }}>Icons</span>
-            </div>
+              }}>Mockup</span>
+            </button>
             
-            {/* Label */}
-            <div style={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '7.2px 16.8px',
-              gap: '12px',
-              width: '164.6px',
-              height: '36.4px',
-              border: '1.2px solid #7C7C7C',
-              borderRadius: '60px',
-              flex: 'none',
-              order: 2,
-              flexGrow: 0
-            }}>
-              {/* Illustrations */}
+            {/* Tools Button */}
+            <button
+              onClick={() => handleNavigation('dashboard')}
+              style={{
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '7.2px 16.8px',
+                gap: '12px',
+                width: '84.6px',
+                height: '36.4px',
+                background: 'transparent',
+                border: '1.2px solid #7C7C7C',
+                borderRadius: '60px',
+                flex: 'none',
+                order: 2,
+                flexGrow: 0,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = '#FF6B35';
+                target.style.border = '1.2px solid #FF6B35';
+                target.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = 'transparent';
+                target.style.border = '1.2px solid #7C7C7C';
+                target.style.transform = 'scale(1)';
+              }}
+            >
               <span style={{
-                width: '131px',
-                height: '22px',
                 fontFamily: 'JetBrains Mono',
                 fontStyle: 'normal',
                 fontWeight: '400',
@@ -654,29 +885,45 @@ const LandingPage = () => {
                 flex: 'none',
                 order: 0,
                 flexGrow: 0
-              }}>Illustrations</span>
-            </div>
+              }}>Tools</span>
+            </button>
             
-            {/* Label */}
-            <div style={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '7.2px 16.8px',
-              gap: '12px',
-              width: '104.6px',
-              height: '36.4px',
-              border: '1.2px solid #7C7C7C',
-              borderRadius: '60px',
-              flex: 'none',
-              order: 3,
-              flexGrow: 0
-            }}>
-              {/* Pattern */}
+            {/* About Button */}
+            <button
+              onClick={() => handleNavigation('dashboard')}
+              style={{
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '7.2px 16.8px',
+                gap: '12px',
+                width: '84.6px',
+                height: '36.4px',
+                background: 'transparent',
+                border: '1.2px solid #7C7C7C',
+                borderRadius: '60px',
+                flex: 'none',
+                order: 3,
+                flexGrow: 0,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = '#FF6B35';
+                target.style.border = '1.2px solid #FF6B35';
+                target.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = 'transparent';
+                target.style.border = '1.2px solid #7C7C7C';
+                target.style.transform = 'scale(1)';
+              }}
+            >
               <span style={{
-                width: '71px',
-                height: '22px',
                 fontFamily: 'JetBrains Mono',
                 fontStyle: 'normal',
                 fontWeight: '400',
@@ -686,8 +933,10 @@ const LandingPage = () => {
                 flex: 'none',
                 order: 0,
                 flexGrow: 0
-              }}>Pattern</span>
-            </div>
+              }}>About</span>
+            </button>
+            
+            
           </div>
 
           {/* Row */}
@@ -703,23 +952,91 @@ const LandingPage = () => {
             order: 1,
             flexGrow: 0
           }}>
-            {/* Label */}
-            <div style={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '7.2px 16.8px',
-              gap: '12px',
-              width: '94.6px',
-              height: '36.4px',
-              border: '1.2px solid #7C7C7C',
-              borderRadius: '60px',
-              flex: 'none',
-              order: 0,
-              flexGrow: 0
-            }}>
-              {/* Photos */}
+            {/* Contact Us Button */}
+            <button
+              onClick={() => handleNavigation('dashboard')}
+              style={{
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '7.2px 16.8px',
+                gap: '12px',
+                width: '150px',
+                height: '36.4px',
+                background: 'transparent',
+                border: '1.2px solid #7C7C7C',
+                borderRadius: '60px',
+                flex: 'none',
+                order: 0,
+                flexGrow: 0,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = '#FF6B35';
+                target.style.border = '1.2px solid #FF6B35';
+                target.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = 'transparent';
+                target.style.border = '1.2px solid #7C7C7C';
+                target.style.transform = 'scale(1)';
+              }}
+            >
+              <span style={{
+                width: '120px',
+                height: '22px',
+                fontFamily: 'JetBrains Mono',
+                fontStyle: 'normal',
+                fontWeight: '400',
+                fontSize: '16.8px',
+                lineHeight: '22px',
+                color: '#1F1F1F',
+                flex: 'none',
+                order: 0,
+                flexGrow: 0
+              }}>Contact Us</span>
+            </button>
+            
+            {/* Photos Button */}
+            <button
+              onClick={() => handleNavigation('dashboard')}
+              style={{
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '7.2px 16.8px',
+                gap: '12px',
+                width: '94.6px',
+                height: '36.4px',
+                background: 'transparent',
+                border: '1.2px solid #7C7C7C',
+                borderRadius: '60px',
+                flex: 'none',
+                order: 6,
+                flexGrow: 0,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = '#FF6B35';
+                target.style.border = '1.2px solid #FF6B35';
+                target.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = 'transparent';
+                target.style.border = '1.2px solid #7C7C7C';
+                target.style.transform = 'scale(1)';
+              }}
+            >
               <span style={{
                 width: '61px',
                 height: '22px',
@@ -730,30 +1047,48 @@ const LandingPage = () => {
                 lineHeight: '22px',
                 color: '#1F1F1F',
                 flex: 'none',
-                order: 0,
+                order: 6,
                 flexGrow: 0
-              }}>Photos</span>
-            </div>
+              }}>Pricing</span>
+            </button>
             
-            {/* Label */}
-            <div style={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '7.2px 16.8px',
-              gap: '12px',
-              width: '134.6px',
-              height: '36.4px',
-              border: '1.2px solid #7C7C7C',
-              borderRadius: '60px',
-              flex: 'none',
-              order: 1,
-              flexGrow: 0
-            }}>
-              {/* Typography */}
+            {/* Typography Button */}
+            <button
+              onClick={() => handleNavigation('dashboard')}
+              style={{
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '7.2px 16.8px',
+                gap: '12px',
+                width: '200px',
+                height: '36.4px',
+                background: 'transparent',
+                border: '1.2px solid #7C7C7C',
+                borderRadius: '60px',
+                flex: 'none',
+                order: 6,
+                flexGrow: 0,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = '#FF6B35';
+                target.style.border = '1.2px solid #FF6B35';
+                target.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = 'transparent';
+                target.style.border = '1.2px solid #7C7C7C';
+                target.style.transform = 'scale(1)';
+              }}
+            >
               <span style={{
-                width: '101px',
+                width: '170px',
                 height: '22px',
                 fontFamily: 'JetBrains Mono',
                 fontStyle: 'normal',
@@ -762,74 +1097,12 @@ const LandingPage = () => {
                 lineHeight: '22px',
                 color: '#1F1F1F',
                 flex: 'none',
-                order: 0,
+                order: 6,
                 flexGrow: 0
-              }}>Typography</span>
-            </div>
+              }}>Chrome Extension</span>
+            </button>
             
-            {/* Label */}
-            <div style={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '7.2px 16.8px',
-              gap: '12px',
-              width: '94.6px',
-              height: '36.4px',
-              border: '1.2px solid #7C7C7C',
-              borderRadius: '60px',
-              flex: 'none',
-              order: 2,
-              flexGrow: 0
-            }}>
-              {/* Colors */}
-              <span style={{
-                width: '61px',
-                height: '22px',
-                fontFamily: 'JetBrains Mono',
-                fontStyle: 'normal',
-                fontWeight: '400',
-                fontSize: '16.8px',
-                lineHeight: '22px',
-                color: '#1F1F1F',
-                flex: 'none',
-                order: 0,
-                flexGrow: 0
-              }}>Colors</span>
-            </div>
             
-            {/* Label */}
-            <div style={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '7.2px 16.8px',
-              gap: '12px',
-              width: '54.6px',
-              height: '36.4px',
-              border: '1.2px solid #7C7C7C',
-              borderRadius: '60px',
-              flex: 'none',
-              order: 3,
-              flexGrow: 0
-            }}>
-              {/* 3D */}
-              <span style={{
-                width: '21px',
-                height: '22px',
-                fontFamily: 'JetBrains Mono',
-                fontStyle: 'normal',
-                fontWeight: '400',
-                fontSize: '16.8px',
-                lineHeight: '22px',
-                color: '#1F1F1F',
-                flex: 'none',
-                order: 0,
-                flexGrow: 0
-              }}>3D</span>
-            </div>
           </div>
 
           {/* Row */}
@@ -845,23 +1118,141 @@ const LandingPage = () => {
             order: 2,
             flexGrow: 0
           }}>
-            {/* Label */}
-            <div style={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '7.2px 16.8px',
-              gap: '12px',
-              width: '94.6px',
-              height: '36.4px',
-              border: '1.2px solid #7C7C7C',
-              borderRadius: '60px',
-              flex: 'none',
-              order: 0,
-              flexGrow: 0
-            }}>
-              {/* Mockup */}
+            {/* Documentations Button */}
+            <button
+              onClick={() => navigateTo('documentation')}
+              style={{
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '7.2px 16.8px',
+                gap: '12px',
+                width: '200px',
+                height: '36.4px',
+                background: 'transparent',
+                border: '1.2px solid #7C7C7C',
+                borderRadius: '60px',
+                flex: 'none',
+                order: 0,
+                flexGrow: 0,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = '#FF6B35';
+                target.style.border = '1.2px solid #FF6B35';
+                target.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = 'transparent';
+                target.style.border = '1.2px solid #7C7C7C';
+                target.style.transform = 'scale(1)';
+              }}
+            >
+              <span style={{
+                width: '170px',
+                height: '22px',
+                fontFamily: 'JetBrains Mono',
+                fontStyle: 'normal',
+                fontWeight: '400',
+                fontSize: '16.8px',
+                lineHeight: '22px',
+                color: '#1F1F1F',
+                flex: 'none',
+                order: 0,
+                flexGrow: 0
+              }}>Documentations</span>
+            </button>
+            
+            {/* Plugin Button */}
+            <button
+              onClick={() => handleNavigation('dashboard')}
+              style={{
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '7.2px 16.8px',
+                gap: '12px',
+                width: '140px',
+                height: '36.4px',
+                background: 'transparent',
+                border: '1.2px solid #7C7C7C',
+                borderRadius: '60px',
+                flex: 'none',
+                order: 1,
+                flexGrow: 0,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = '#FF6B35';
+                target.style.border = '1.2px solid #FF6B35';
+                target.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = 'transparent';
+                target.style.border = '1.2px solid #7C7C7C';
+                target.style.transform = 'scale(1)';
+              }}
+            >
+              <span style={{
+                width: '110px',
+                height: '22px',
+                fontFamily: 'JetBrains Mono',
+                fontStyle: 'normal',
+                fontWeight: '400',
+                fontSize: '16.8px',
+                lineHeight: '22px',
+                color: '#1F1F1F',
+                flex: 'none',
+                order: 0,
+                flexGrow: 0
+              }}>IDE plugin</span>
+            </button>
+            
+            {/* Quotes Button */}
+            <button
+              onClick={() => handleNavigation('dashboard')}
+              style={{
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '7.2px 16.8px',
+                gap: '12px',
+                width: '94.6px',
+                height: '36.4px',
+                background: 'transparent',
+                border: '1.2px solid #7C7C7C',
+                borderRadius: '60px',
+                flex: 'none',
+                order: 6,
+                flexGrow: 0,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = '#FF6B35';
+                target.style.border = '1.2px solid #FF6B35';
+                target.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                target.style.background = 'transparent';
+                target.style.border = '1.2px solid #7C7C7C';
+                target.style.transform = 'scale(1)';
+              }}
+            >
               <span style={{
                 width: '61px',
                 height: '22px',
@@ -872,106 +1263,10 @@ const LandingPage = () => {
                 lineHeight: '22px',
                 color: '#1F1F1F',
                 flex: 'none',
-                order: 0,
+                order: 6,
                 flexGrow: 0
-              }}>Mockup</span>
-            </div>
-            
-            {/* Label */}
-            <div style={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '7.2px 16.8px',
-              gap: '12px',
-              width: '84.6px',
-              height: '36.4px',
-              border: '1.2px solid #7C7C7C',
-              borderRadius: '60px',
-              flex: 'none',
-              order: 1,
-              flexGrow: 0
-            }}>
-              {/* Tools */}
-              <span style={{
-                width: '51px',
-                height: '22px',
-                fontFamily: 'JetBrains Mono',
-                fontStyle: 'normal',
-                fontWeight: '400',
-                fontSize: '16.8px',
-                lineHeight: '22px',
-                color: '#1F1F1F',
-                flex: 'none',
-                order: 0,
-                flexGrow: 0
-              }}>Tools</span>
-            </div>
-            
-            {/* Label */}
-            <div style={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '7.2px 16.8px',
-              gap: '12px',
-              width: '94.6px',
-              height: '36.4px',
-              border: '1.2px solid #7C7C7C',
-              borderRadius: '60px',
-              flex: 'none',
-              order: 2,
-              flexGrow: 0
-            }}>
-              {/* Plugin */}
-              <span style={{
-                width: '61px',
-                height: '22px',
-                fontFamily: 'JetBrains Mono',
-                fontStyle: 'normal',
-                fontWeight: '400',
-                fontSize: '16.8px',
-                lineHeight: '22px',
-                color: '#1F1F1F',
-                flex: 'none',
-                order: 0,
-                flexGrow: 0
-              }}>Plugin</span>
-            </div>
-            
-            {/* Label */}
-            <div style={{
-              boxSizing: 'border-box',
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'flex-start',
-              padding: '7.2px 16.8px',
-              gap: '12px',
-              width: '94.6px',
-              height: '36.4px',
-              border: '1.2px solid #7C7C7C',
-              borderRadius: '60px',
-              flex: 'none',
-              order: 3,
-              flexGrow: 0
-            }}>
-              {/* Quotes */}
-              <span style={{
-                width: '61px',
-                height: '22px',
-                fontFamily: 'JetBrains Mono',
-                fontStyle: 'normal',
-                fontWeight: '400',
-                fontSize: '16.8px',
-                lineHeight: '22px',
-                color: '#1F1F1F',
-                flex: 'none',
-                order: 0,
-                flexGrow: 0
-              }}>Quotes</span>
-            </div>
+              }}>Privacy</span>
+            </button>
           </div>
         </div>
       </div>
@@ -982,7 +1277,7 @@ const LandingPage = () => {
         width: '800px',
         height: '200px',
         left: 'calc(50% - 800px/2)',
-        top: '630px',
+        top: '610px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1102,7 +1397,7 @@ const LandingPage = () => {
                 lineHeight: '1.5',
                 minHeight: '20px'
               }}>
-                <div ref={typingTextRef} style={{
+                <div ref={typingTextRef} className="typing-text" style={{
                   display: 'inline'
                 }}></div>
                 <div style={{
@@ -1142,35 +1437,37 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Popup for Trim Prompt */}
+          {/* Popup for Trim Prompt - positioned next to sub-logo */}
           <div id="trim-popup" style={{
             position: 'absolute',
-            top: '-80px',
-            right: '20px',
+            top: '50%',
+            right: '-120px',
+            transform: 'translateY(-50%)',
             background: '#FF6B35',
             color: '#FFFFFF',
-            padding: '12px 16px',
-            borderRadius: '8px',
+            padding: '8px 12px',
+            borderRadius: '6px',
             fontFamily: 'JetBrains Mono',
-            fontSize: '12px',
+            fontSize: '11px',
             fontWeight: '500',
             boxShadow: '0 4px 12px rgba(255,107,53,0.3)',
             opacity: 0,
-            transform: 'translateY(10px)',
             transition: 'all 0.3s ease',
             zIndex: 1000,
-            cursor: 'pointer'
+            cursor: 'pointer',
+            whiteSpace: 'nowrap'
           }}>
-            ✂️ Trim this prompt
+            ✂️ Trim prompt
             <div style={{
               position: 'absolute',
-              bottom: '-6px',
-              right: '20px',
+              left: '-6px',
+              top: '50%',
+              transform: 'translateY(-50%)',
               width: '0',
               height: '0',
-              borderLeft: '6px solid transparent',
-              borderRight: '6px solid transparent',
-              borderTop: '6px solid #FF6B35'
+              borderTop: '6px solid transparent',
+              borderBottom: '6px solid transparent',
+              borderRight: '6px solid #FF6B35'
             }}></div>
           </div>
         </div>
@@ -1178,10 +1475,34 @@ const LandingPage = () => {
 
       {/* CSS Animations */}
       <style>{`
+        .cursor {
+          animation: blink 1s infinite;
+          color: #FF6B35;
+        }
+        
+        .typing-text {
+          font-family: 'JetBrains Mono', monospace;
+          line-height: 1.4;
+          word-wrap: break-word;
+          white-space: pre-wrap;
+          text-rendering: optimizeLegibility;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+        
         @keyframes blink {
           0%, 50% { opacity: 1; }
           51%, 100% { opacity: 0; }
         }
+      
+      @keyframes glow {
+        0% {
+          box-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+        }
+        100% {
+          box-shadow: 0 0 35px rgba(255, 107, 53, 0.9), 0 0 50px rgba(255, 107, 53, 0.5);
+        }
+      }
       `}</style>
 
 
@@ -1189,48 +1510,73 @@ const LandingPage = () => {
       <footer style={{
         boxSizing: 'border-box',
         display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        flexDirection: 'column',
         padding: '20px 0px 0px',
         gap: '20px',
         position: 'absolute',
         width: '1550px',
-        height: '60px',
+        minHeight: '60px',
         left: 'calc(50% - 1550px/2)',
         bottom: '47px',
         borderTop: '1px solid #1F1F1F'
       }}>
-        {/* 2025 © PrompTrim. All rights reserved */}
-        <div style={{
-          width: '350px',
-          height: '18px',
-          fontFamily: 'JetBrains Mono',
-          fontStyle: 'normal',
-          fontWeight: '400',
-          fontSize: '14px',
-          lineHeight: '18px',
-          color: '#7C7C7C',
-          textAlign: 'left',
-          flex: 'none',
-          order: 0,
-          flexGrow: 0
-        }}>2025 © PrompTrim. All rights reserved</div>
-
-        {/* Socmed */}
+        {/* Main footer row */}
         <div style={{
           display: 'flex',
           flexDirection: 'row',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '0px',
-          gap: '16px',
-          width: '208px',
-          height: '40px',
-          flex: 'none',
-          order: 1,
-          flexGrow: 0
+          width: '100%',
+          position: 'relative'
         }}>
+          {/* 2025 © PrompTrim. All rights reserved */}
+          <div style={{
+            width: '350px',
+            height: '18px',
+            fontFamily: 'JetBrains Mono',
+            fontStyle: 'normal',
+            fontWeight: '400',
+            fontSize: '14px',
+            lineHeight: '18px',
+            color: '#7C7C7C',
+            textAlign: 'left',
+            flex: 'none',
+            order: 0,
+            flexGrow: 0
+          }}>2025 © PrompTrim. All rights reserved</div>
+          
+          {/* Centered Text - Absolutely positioned */}
+          <div style={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontFamily: 'JetBrains Mono',
+            fontStyle: 'normal',
+            fontWeight: '400',
+            fontSize: '12px',
+            lineHeight: '16px',
+            color: '#FF6B35',
+            textAlign: 'center',
+            whiteSpace: 'nowrap'
+          }}>
+            Works with any LLM pipeline - if your app sends text in and gets text out, PrompTrim fits right in
+          </div>
+
+          
+          {/* Socmed */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            padding: '0px',
+            gap: '16px',
+            width: '208px',
+            height: '40px',
+            flex: 'none',
+            order: 1,
+            flexGrow: 0
+          }}>
           {/* X (Twitter) */}
           <a href="https://x.com" target="_blank" rel="noopener noreferrer" style={{
             boxSizing: 'border-box',
@@ -1347,7 +1693,11 @@ const LandingPage = () => {
             }} />
           </a>
         </div>
+        </div>
       </footer>
+
+      {/* Chat Assistant Modal */}
+      <ChatAssistant isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 };
