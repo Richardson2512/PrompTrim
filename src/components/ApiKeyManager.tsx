@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Copy, Check, Key, Plus, AlertCircle, Trash2, X } from 'lucide-react';
+import { Copy, Check, Key, Plus, AlertCircle, Trash2, X, Mail, Github, Linkedin, Twitter } from 'lucide-react';
 import { useRouter } from '../contexts/RouterContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -991,6 +991,88 @@ const ApiKeyManager = () => {
           </div>
         </div>
       </div>
+
+      {/* Footer (from LandingPage) */}
+      <footer style={{
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '20px 0px 0px',
+        gap: '20px',
+        width: '100%',
+        maxWidth: '1550px',
+        margin: '40px auto 0',
+        borderTop: '1px solid #1F1F1F'
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          width: '100%',
+          position: 'relative'
+        }}>
+          <div style={{
+            width: '350px',
+            height: '18px',
+            fontFamily: 'JetBrains Mono',
+            fontStyle: 'normal',
+            fontWeight: '400',
+            fontSize: '14px',
+            lineHeight: '18px',
+            color: '#7C7C7C',
+            textAlign: 'left',
+          }}>2025 © PrompTrim. All rights reserved</div>
+
+          <div style={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontFamily: 'JetBrains Mono',
+            fontStyle: 'normal',
+            fontWeight: '400',
+            fontSize: '12px',
+            lineHeight: '16px',
+            color: '#FF6B35',
+            textAlign: 'center',
+            whiteSpace: 'nowrap'
+          }}>
+            Works with any LLM pipeline - if your app sends text in and gets text out, PrompTrim fits right in
+          </div>
+
+          <div style={{
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            padding: '0px',
+            gap: '16px',
+            width: '208px',
+            height: '40px',
+          }}>
+            <a href="https://x.com" target="_blank" rel="noopener noreferrer" style={{
+              boxSizing: 'border-box', display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: '3px', gap: '10px', width: '40px', height: '40px', border: '1px solid #DBDBDB', borderRadius: '50px', textDecoration: 'none', color: 'inherit'
+            }}>
+              <Twitter style={{ width: '20px', height: '20px' }} />
+            </a>
+            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" style={{
+              boxSizing: 'border-box', display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: '3px', gap: '10px', width: '40px', height: '40px', border: '1px solid #DBDBDB', borderRadius: '50px', textDecoration: 'none', color: 'inherit'
+            }}>
+              <Linkedin style={{ width: '20px', height: '20px' }} />
+            </a>
+            <a href="mailto:example@example.com" style={{
+              boxSizing: 'border-box', display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: '3px', gap: '10px', width: '40px', height: '40px', border: '1px solid #DBDBDB', borderRadius: '50px', textDecoration: 'none', color: 'inherit'
+            }}>
+              <Mail style={{ width: '20px', height: '20px' }} />
+            </a>
+            <a href="https://github.com" target="_blank" rel="noopener noreferrer" style={{
+              boxSizing: 'border-box', display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: '3px', gap: '10px', width: '40px', height: '40px', border: '1px solid #DBDBDB', borderRadius: '50px', textDecoration: 'none', color: 'inherit'
+            }}>
+              <Github style={{ width: '20px', height: '20px' }} />
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
