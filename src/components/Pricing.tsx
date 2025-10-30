@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check } from 'lucide-react';
+import { Check, Mail, Github, Linkedin, Twitter } from 'lucide-react';
 import { useRouter } from '../contexts/RouterContext';
 
 const plans = [
@@ -170,17 +170,16 @@ const Pricing: React.FC = () => {
             </div>
             <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 16, width: 208, height: 40 }}>
               <a href="https://x.com" target="_blank" rel="noopener noreferrer" style={{ boxSizing: 'border-box', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 3, width: 40, height: 40, border: '1px solid #DBDBDB', borderRadius: 50, textDecoration: 'none', color: 'inherit' }}>
-                {/* simple X */}
-                <span style={{ fontWeight: 700 }}>X</span>
+                <Twitter style={{ width: 20, height: 20 }} />
               </a>
               <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" style={{ boxSizing: 'border-box', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 3, width: 40, height: 40, border: '1px solid #DBDBDB', borderRadius: 50, textDecoration: 'none', color: 'inherit' }}>
-                in
+                <Linkedin style={{ width: 20, height: 20 }} />
               </a>
               <a href="mailto:example@example.com" style={{ boxSizing: 'border-box', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 3, width: 40, height: 40, border: '1px solid #DBDBDB', borderRadius: 50, textDecoration: 'none', color: 'inherit' }}>
-                @
+                <Mail style={{ width: 20, height: 20 }} />
               </a>
               <a href="https://github.com" target="_blank" rel="noopener noreferrer" style={{ boxSizing: 'border-box', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 3, width: 40, height: 40, border: '1px solid #DBDBDB', borderRadius: 50, textDecoration: 'none', color: 'inherit' }}>
-                GH
+                <Github style={{ width: 20, height: 20 }} />
               </a>
             </div>
           </div>
