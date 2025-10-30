@@ -27,6 +27,7 @@ from pipelines.output.summarizer import OutputSummarizer, build_quality_summary_
 from services.rules_engine import OpenAIRules, AnthropicRules, OutputFormat
 from services.token_counter import OpenAITokenCounter
 from database import get_supabase
+import hashlib
 from services.grammar_service import get_grammar_service
 
 @asynccontextmanager
@@ -72,8 +73,9 @@ async def api_key_middleware(request: Request, call_next):
             if not auth or not auth.startswith("Bearer "):
                 return JSONResponse(status_code=401, content={"detail": "Missing API key"})
             key = auth.split(" ")[1]
+            key_hash = hashlib.sha256(key.encode()).hexdigest()
             supabase = get_supabase()
-            res = supabase.table("api_keys").select("optimization_level, user_id").eq("key", key).execute()
+            res = supabase.table("api_keys").select("optimization_level, user_id, key_type, is_active").eq("key_hash", key_hash).eq("is_active", True).execute()
             if not res.data:
                 return JSONResponse(status_code=403, content={"detail": "Invalid API key"})
             request.state.api_key_info = res.data[0]
@@ -257,13 +259,21 @@ async def optimize_with_api_key(request: PromptOptimizeRequest, req: Request, au
                 detail="API key required in Authorization header"
             )
         
-        # Get user from API key
-        profile = auth_service.get_user_from_api_key(api_key)
-        if not profile:
+        # Enforce key type: input or overall only for input optimization
+        key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+        sb = get_supabase()
+        key_res = sb.table("api_keys").select("key_type, is_active, user_id").eq("key_hash", key_hash).eq("is_active", True).execute()
+        if not key_res.data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or inactive API key"
             )
+        key_type = key_res.data[0].get("key_type")
+        if key_type not in ("input", "overall"):
+            raise HTTPException(status_code=403, detail="API key not permitted for input optimization. Use an 'input' or 'overall' key.")
+
+        # Get user from API key
+        profile = auth_service.get_profile_by_id(key_res.data[0].get("user_id"))
         
         # Optimize the prompt
         optimized_result = await prompt_service.optimize_prompt(
@@ -450,8 +460,14 @@ async def llm_chat(request: LLMChatRequest, req: Request):
     try:
         # Resolve optimization level from API key (if present)
         api_level = None
+        api_key_type = None
         if hasattr(req.state, "api_key_info"):
             api_level = req.state.api_key_info.get("optimization_level")
+            api_key_type = req.state.api_key_info.get("key_type")
+
+        # Enforce overall key for end-to-end pipeline
+        if api_key_type and api_key_type != "overall":
+            raise HTTPException(status_code=403, detail="API key not permitted for overall pipeline. Use an 'overall' key.")
 
         # Map optimization level to compression ratio
         compression_ratios = {
@@ -577,6 +593,7 @@ async def llm_chat(request: LLMChatRequest, req: Request):
 @app.post("/api/output/reduce", response_model=OutputReduceResponse)
 async def reduce_output(request: OutputReduceRequest):
     try:
+        # No middleware here; optional future enforcement if we want auth
         summary, similarity, iterations = qa_summarizer.summarize_with_quality_check(
             request.text,
             max_length=request.max_length,
