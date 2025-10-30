@@ -8,6 +8,7 @@ import LandingPage from './components/LandingPage';
 import ApiKeyManager from './components/ApiKeyManager';
 import Documentation from './components/Documentation';
 import { isSupabaseConfigured } from './lib/supabase';
+import Pricing from './components/Pricing';
 
 const AppContent = () => {
   const { user, loading } = useAuth();
@@ -75,6 +76,8 @@ const AppContent = () => {
         return <LandingPage />;
       case 'documentation':
         return <Documentation />;
+      case 'pricing':
+        return <Pricing />;
       case 'login':
       case 'signup':
       case 'dashboard':
@@ -92,6 +95,8 @@ const AppContent = () => {
       return <ApiKeyManager />;
     case 'documentation':
       return <Documentation />;
+    case 'pricing':
+      return <Pricing />;
     case 'landing':
     default:
       return <LandingPage />;

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-type Route = 'landing' | 'login' | 'signup' | 'dashboard' | 'api-keys' | 'documentation';
+type Route = 'landing' | 'login' | 'signup' | 'dashboard' | 'api-keys' | 'documentation' | 'pricing';
 
 interface RouterContextType {
   currentRoute: Route;
@@ -14,7 +14,7 @@ const RouterContext = createContext<RouterContextType | undefined>(undefined);
 // Get initial route from URL
 const getInitialRoute = (): Route => {
   const path = window.location.pathname.slice(1); // Remove leading /
-  const validRoutes: Route[] = ['landing', 'login', 'signup', 'dashboard', 'api-keys', 'documentation'];
+  const validRoutes: Route[] = ['landing', 'login', 'signup', 'dashboard', 'api-keys', 'documentation', 'pricing'];
   return validRoutes.includes(path as Route) ? (path as Route) : 'landing';
 };
 
@@ -34,7 +34,7 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       const path = window.location.pathname.slice(1);
-      const validRoutes: Route[] = ['landing', 'login', 'signup', 'dashboard', 'api-keys', 'documentation'];
+      const validRoutes: Route[] = ['landing', 'login', 'signup', 'dashboard', 'api-keys', 'documentation', 'pricing'];
       if (validRoutes.includes(path as Route)) {
         setCurrentRoute(path as Route);
       }
