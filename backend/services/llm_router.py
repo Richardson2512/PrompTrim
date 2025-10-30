@@ -3,6 +3,10 @@ from typing import Any, Dict, Optional
 
 import httpx
 from .token_counter import OpenAITokenCounter
+from ..pipelines.output.tokenization.openai_tokenizer import count_text as openai_count
+from ..pipelines.output.tokenization.anthropic_tokenizer import estimate_tokens as anthropic_estimate
+from ..pipelines.output.tokenization.grok_tokenizer import estimate_tokens as grok_estimate
+from ..pipelines.output.tokenization.custom_tokenizer import estimate_tokens as custom_estimate
 
 
 class LLMRouter:
@@ -130,19 +134,12 @@ class LLMRouter:
     def estimate_tokens(self, provider: str, text: str) -> int:
         provider = (provider or "").lower()
         if provider == "openai":
-            # Use exact OpenAI token counter (tiktoken) only for OpenAI branch
-            try:
-                model = self.default_models.get("openai", "gpt-4o-mini")
-                return OpenAITokenCounter.count(text or "", model=model)
-            except Exception:
-                return max(1, len(text or "") // 4)
+            model = self.default_models.get("openai", "gpt-4o-mini")
+            return openai_count(text or "", model=model)
         if provider == "anthropic":
-            # Claude tokens ~ characters/4 as a rough estimate
-            return max(1, len(text or "") // 4)
+            return anthropic_estimate(text)
         if provider == "grok":
-            # Approximate similar to GPT-3.5/4
-            return max(1, len(text or "") // 4)
-        # Custom unknown model
-        return max(1, len(text or "") // 4)
+            return grok_estimate(text)
+        return custom_estimate(text)
 
 

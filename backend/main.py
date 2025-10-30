@@ -20,10 +20,10 @@ from schemas import (
 from services.auth_service import AuthService
 from services.prompt_service import PromptOptimizationService
 from services.email_service import EmailService
-from services.tinyllama_service import TinyLlamaService
+from pipelines.input.compressor import InputCompressor
 from services.docs_chat_service import DocsChatService
 from services.llm_router import LLMRouter
-from services.enhanced_summarizer import QualityAssuredSummarizer, build_quality_summary_response
+from pipelines.output.summarizer import OutputSummarizer, build_quality_summary_response
 from services.rules_engine import OpenAIRules, AnthropicRules, OutputFormat
 from services.token_counter import OpenAITokenCounter
 from database import get_supabase
@@ -58,10 +58,10 @@ security = HTTPBearer()
 auth_service = AuthService()
 prompt_service = PromptOptimizationService()
 email_service = EmailService()
-tinyllama_service = TinyLlamaService()
+tinyllama_service = InputCompressor()
 docs_chat_service = DocsChatService()
 llm_router = LLMRouter()
-qa_summarizer = QualityAssuredSummarizer(similarity_threshold=0.75)
+qa_summarizer = OutputSummarizer(similarity_threshold=0.75)
 
 # API key middleware: attach api_key_info for /api/llm/* routes
 @app.middleware("http")
