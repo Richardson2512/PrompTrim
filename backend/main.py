@@ -520,6 +520,32 @@ async def llm_chat(request: LLMChatRequest, req: Request):
                 "efficiency": efficiency,
             }
 
+        # Log to Supabase prompts table as an output reduction record
+        try:
+            supabase = get_supabase()
+            cost_per_token = 0.03 / 1000
+            tokens_saved = max(0, original_output_tokens - compressed_output_tokens)
+            cost_saved_usd = tokens_saved * cost_per_token
+            user_id = None
+            if hasattr(req.state, "api_key_info"):
+                user_id = req.state.api_key_info.get("user_id")
+            if user_id:
+                supabase.table("prompts").insert({
+                    "id": str(uuid.uuid4()),
+                    "user_id": user_id,
+                    "original_text": raw_output,
+                    "original_token_count": original_output_tokens,
+                    "optimized_text": final_summary,
+                    "optimized_token_count": compressed_output_tokens,
+                    "tokens_saved": tokens_saved,
+                    "optimization_level": effective_level,
+                    "language": "en",
+                    "status": "completed",
+                    "cost_saved_usd": cost_saved_usd,
+                }).execute()
+        except Exception as _log_err:
+            print(f"Warning: failed to log output reduction: {_log_err}")
+
         response_payload = LLMChatResponse(
             provider=request.provider,
             model=(request.model or ""),

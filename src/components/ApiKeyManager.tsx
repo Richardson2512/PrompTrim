@@ -20,7 +20,7 @@ const ApiKeyManager = () => {
   const { user, profile: authProfile, loading: authLoading } = useAuth();
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newKeyName, setNewKeyName] = useState('');
-  const newKeyType = 'input'; // Only Input supported for now
+  const [newKeyType, setNewKeyType] = useState<'backend' | 'overall'>('backend');
   const [newKeyOptimizationLevel, setNewKeyOptimizationLevel] = useState<'aggressive' | 'moderate' | 'minimal'>('moderate');
   const [isCreating, setIsCreating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -139,8 +139,8 @@ const ApiKeyManager = () => {
     }
   };
 
-  // Filter keys to only show Input keys (since Output is not implemented yet)
-  const filteredKeys = apiKeys.filter(key => key.key_type === 'input');
+  // Show all keys regardless of type
+  const filteredKeys = apiKeys;
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -587,32 +587,62 @@ const ApiKeyManager = () => {
             Create New API Key
           </h3>
           
-          {/* Key Type Info */}
-          <div style={{ 
-            marginBottom: '15px', 
-            padding: '12px', 
-            background: '#E3F2FD', 
-            border: '1px solid #BBDEFB',
-            borderRadius: '8px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <AlertCircle size={16} style={{ color: '#2196F3' }} />
-              <span style={{ 
-                color: '#1976D2', 
-                fontSize: '13px', 
-                fontWeight: '500',
-                fontFamily: 'JetBrains Mono, monospace'
-              }}>
-                Input Keys Only
-              </span>
-            </div>
-            <p style={{ 
-              color: '#1565C0', 
-              fontSize: '12px', 
-              margin: 0,
+          {/* Key Type Selection */}
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{
+              display: 'block',
+              color: '#1F1F1F',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginBottom: '10px',
               fontFamily: 'JetBrains Mono, monospace'
             }}>
-              Currently supporting Input token reduction only. Output keys will be available in a future update.
+              Key Type
+            </label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {(['backend', 'overall'] as const).map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setNewKeyType(type)}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    border: '2px solid',
+                    borderColor: newKeyType === type ? '#FF6B35' : '#E5E7EB',
+                    background: newKeyType === type ? '#FFF4E6' : '#FFFFFF',
+                    color: newKeyType === type ? '#FF6B35' : '#1F1F1F',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    transition: 'all 0.2s',
+                    textTransform: 'capitalize'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (newKeyType !== type) {
+                      e.currentTarget.style.borderColor = '#FF6B35';
+                      e.currentTarget.style.background = '#FFF8F3';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (newKeyType !== type) {
+                      e.currentTarget.style.borderColor = '#E5E7EB';
+                      e.currentTarget.style.background = '#FFFFFF';
+                    }
+                  }}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+            <p style={{
+              color: '#7C7C7C',
+              fontSize: '12px',
+              margin: '8px 0 0 0',
+              fontFamily: 'JetBrains Mono, monospace'
+            }}>
+              Backend key: for output reduction and routing. Overall key: full pipeline (input+output).
             </p>
           </div>
 
@@ -777,16 +807,7 @@ const ApiKeyManager = () => {
               Your API Keys ({filteredKeys.length})
             </h3>
             
-            {/* Filter Buttons - Only show Input since Output is not available yet */}
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span style={{ 
-                fontSize: '12px', 
-                color: '#7C7C7C',
-                fontFamily: 'JetBrains Mono, monospace'
-              }}>
-                Input Keys Only
-              </span>
-            </div>
+            <div />
           </div>
           
           {filteredKeys.length === 0 ? (

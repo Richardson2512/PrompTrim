@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useRouter } from '../contexts/RouterContext';
 import { 
@@ -213,6 +214,29 @@ const Dashboard: React.FC = () => {
 
     fetchDashboardData();
   }, [user?.id, dataLoaded]);
+
+  // Realtime updates: subscribe to Supabase changes on prompts for this user
+  useEffect(() => {
+    if (!user?.id) return;
+    if (!isSupabaseConfigured()) return;
+
+    const channel = supabase
+      .channel('prompts-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'prompts',
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        // Refresh analytics and history on any change
+        retryFetch();
+      })
+      .subscribe();
+
+    return () => {
+      try { supabase.removeChannel(channel); } catch {}
+    };
+  }, [user?.id, retryFetch]);
 
   // Calculate metrics from real data - memoized
   const metrics = useMemo(() => analyticsData ? {
