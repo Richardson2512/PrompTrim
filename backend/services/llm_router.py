@@ -7,6 +7,7 @@ from ..pipelines.output.tokenization.openai_tokenizer import count_text as opena
 from ..pipelines.output.tokenization.anthropic_tokenizer import estimate_tokens as anthropic_estimate
 from ..pipelines.output.tokenization.grok_tokenizer import estimate_tokens as grok_estimate
 from ..pipelines.output.tokenization.custom_tokenizer import estimate_tokens as custom_estimate
+from ..pipelines.output.tokenization.gemini_tokenizer import estimate_tokens as gemini_estimate
 
 
 class LLMRouter:
@@ -21,13 +22,15 @@ class LLMRouter:
         self.grok_api_key = os.getenv("GROK_API_KEY")  # xAI
         self.custom_llm_endpoint = os.getenv("CUSTOM_LLM_ENDPOINT")
         self.custom_llm_api_key = os.getenv("CUSTOM_LLM_API_KEY")
+        self.gemini_api_key = os.getenv("GEMINI_API_KEY")
 
         # Default models (can be overridden per call)
         self.default_models = {
             "openai": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
             "anthropic": os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest"),
             "grok": os.getenv("GROK_MODEL", "grok-beta"),
-            "custom": os.getenv("CUSTOM_LLM_MODEL", "default")
+            "custom": os.getenv("CUSTOM_LLM_MODEL", "default"),
+            "gemini": os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
         }
 
     async def call(self, provider: str, prompt: str, max_output_tokens: int = 256, model: Optional[str] = None) -> Dict[str, Any]:
@@ -40,6 +43,8 @@ class LLMRouter:
             return await self._call_grok(prompt, max_output_tokens, model or self.default_models["grok"])
         if provider == "custom":
             return await self._call_custom(prompt, max_output_tokens, model or self.default_models["custom"])
+        if provider == "gemini":
+            return await self._call_gemini(prompt, max_output_tokens, model or self.default_models["gemini"])
         raise ValueError(f"Unsupported provider: {provider}")
 
     # --- Provider branches ---
@@ -129,6 +134,25 @@ class LLMRouter:
         text = data.get("text") or data.get("output") or ""
         return {"text": text, "raw": data}
 
+    async def _call_gemini(self, prompt: str, max_output_tokens: int, model: str) -> Dict[str, Any]:
+        if not self.gemini_api_key:
+            return {"error": "GEMINI_API_KEY not configured"}
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=self.gemini_api_key)
+            # Use the SDK with a text-only request
+            client = genai.GenerativeModel(model)
+            resp = await client.generate_content_async(prompt, generation_config={"max_output_tokens": max_output_tokens})
+            text = ""
+            if hasattr(resp, "text"):
+                text = resp.text or ""
+            elif hasattr(resp, "candidates") and resp.candidates:
+                parts = getattr(resp.candidates[0], "content", {}).get("parts", [])
+                text = "".join([getattr(p, "text", "") for p in parts])
+            return {"text": text, "raw": getattr(resp, "to_dict", lambda: {} )() if hasattr(resp, "to_dict") else {}}
+        except Exception as e:
+            return {"error": f"Gemini call failed: {e}"}
+
     # --- Tokenization helpers (approximate) ---
 
     def estimate_tokens(self, provider: str, text: str) -> int:
@@ -140,6 +164,8 @@ class LLMRouter:
             return anthropic_estimate(text)
         if provider == "grok":
             return grok_estimate(text)
+        if provider == "gemini":
+            return gemini_estimate(text)
         return custom_estimate(text)
 
 
