@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Copy, Check, Key, Plus, AlertCircle, Trash2, X, Mail, Github, Linkedin, Twitter } from 'lucide-react';
 import { useRouter } from '../contexts/RouterContext';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface ApiKey {
   id: string;
@@ -59,11 +60,41 @@ const ApiKeyManager = () => {
       // Filter to show only active/live keys (remove demo keys)
       setApiKeys(keys.filter((key: ApiKey) => key.is_active === true));
       } else {
-        setApiKeys([]);
+        // Backend not available or failed
+        // Fallback to Supabase direct fetch if configured
+        if (isSupabaseConfigured()) {
+          const { data, error } = await supabase
+            .from('api_keys')
+            .select('id, user_id, key_prefix, name, key_type, optimization_level, is_active, last_used_at, created_at')
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+          if (!error && data) {
+            setApiKeys(data as unknown as ApiKey[]);
+          } else {
+            setApiKeys([]);
+          }
+        } else {
+          setApiKeys([]);
+        }
       }
     } catch (err) {
       console.error('Failed to load API keys:', err);
-      setApiKeys([]);
+      if (isSupabaseConfigured()) {
+        const { data, error } = await supabase
+          .from('api_keys')
+          .select('id, user_id, key_prefix, name, key_type, optimization_level, is_active, last_used_at, created_at')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          setApiKeys(data as unknown as ApiKey[]);
+        } else {
+          setApiKeys([]);
+        }
+      } else {
+        setApiKeys([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -73,6 +104,26 @@ const ApiKeyManager = () => {
     if (userId) {
       loadApiKeys();
     }
+  }, [userId, loadApiKeys]);
+
+  // Realtime subscribe to api_keys changes for this user (if Supabase configured)
+  useEffect(() => {
+    if (!userId || !isSupabaseConfigured()) return;
+    const channel = supabase
+      .channel('api-keys-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'api_keys',
+        filter: `user_id=eq.${userId}`,
+      }, () => {
+        loadApiKeys();
+      })
+      .subscribe();
+
+    return () => {
+      try { supabase.removeChannel(channel); } catch {}
+    };
   }, [userId, loadApiKeys]);
 
   const createApiKey = async () => {

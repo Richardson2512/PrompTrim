@@ -480,13 +480,16 @@ const Dashboard: React.FC = () => {
             <span className="ml-3">Help Centre</span>
           </button>
           <button 
-            onClick={() => {
+            onClick={async () => {
               console.log('🔥 LOGOUT BUTTON CLICKED!');
-              signOut().then(() => {
+              try {
+                await signOut();
                 console.log('✅ Logout successful');
-              }).catch((error) => {
+                navigateTo('landing');
+              } catch (error) {
                 console.error('❌ Logout failed:', error);
-              });
+                navigateTo('landing');
+              }
             }}
             disabled={isSigningOut}
             className={`w-full flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors ${
